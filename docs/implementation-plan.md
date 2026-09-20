@@ -1,6 +1,6 @@
 # Implementation plan — accepted architecture
 
-The current architecture is React/TypeScript PWA + Python FastAPI and jobs + embedded SQLite in one Unraid application container. All data lives on a persistent local appdata mount. Host Tailscale Serve provides private HTTPS. Supabase, GitHub Pages, Google SSO, invite codes, and alerts are out of scope.
+The current architecture is React/TypeScript PWA + Python FastAPI and jobs + embedded SQLite in one Unraid application container. All data lives on a persistent local appdata mount. An owner-managed private HTTPS proxy can provide PWA access. Supabase, GitHub Pages, Google SSO, invite codes, and alerts are out of scope.
 
 ## Deliverables
 
@@ -8,8 +8,12 @@ The current architecture is React/TypeScript PWA + Python FastAPI and jobs + emb
 - SQLite WAL persistence, idempotent minute inserts, raw-payload retention, hourly/daily summaries, versioned schema, daily consistent snapshots, and explicit restore procedures.
 - Open-Meteo weather and regional PM2.5 forecasts using privately stored coordinates. Historical forecasts are selected without look-ahead.
 - Responsive dashboard for live readings, time ranges, visual comparisons, daily patterns, thresholds, CSV export, and system status.
-- One non-root application container, loopback-only HTTP port, persistent appdata mount, and private tailnet HTTPS.
+- One container with privilege-dropping startup, persistent appdata, and an Unraid Docker template. No automatic host installation or configuration.
 - Address and sensor network metadata absent from committed files and browser APIs.
+
+## Distribution
+
+Prepare a public GHCR image, generic Unraid template, repository profile, and owner-triggered release workflow. Community Applications publication is a separate review/submission step. Do not deploy to a user server as part of development.
 
 ## Validation and handoff
 

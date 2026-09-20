@@ -2,7 +2,7 @@
 
 ## Storage and privacy
 
-Bind a dedicated local SSD appdata directory to `/data`. Keep ownership UID/GID 10001 and directory mode 700. This directory contains `indigo.sqlite`, WAL/SHM files, and `backups/`. Backups include the private configuration table and raw sensor metadata: never upload them unencrypted to a public location or commit them to Git.
+Bind a dedicated local SSD appdata directory to `/data`. The entrypoint sets ownership to PUID/PGID (default 99:100) and directory mode 700 before dropping privileges. Use a dedicated app directory, never a shared parent directory. This directory contains `indigo.sqlite`, WAL/SHM files, and `backups/`. Backups include the private configuration table and raw sensor metadata: never upload them unencrypted to a public location or commit them to Git.
 
 SQLite uses WAL mode, foreign keys, a busy timeout, and `synchronous=FULL`. Short database transactions avoid blocking collection while charts are queried. The app has one scheduler and must run with one server worker.
 
@@ -10,7 +10,7 @@ Minute-level records are not automatically deleted. Raw payloads are retained fo
 
 ## Update without losing data
 
-Build the next image while the existing app runs. Note the current image ID, data mount, and record count using `docker inspect` and `/api/status`. Then:
+Pull or build the next image while the existing app runs. Note the current image ID, data mount, and record count using `docker inspect` and `/api/status`. Then:
 
 1. Stop the existing container with a 35-second grace period.
 2. Run `python -m backend.manage backup` in a temporary container using the **previous image** and the same `/data` mount. This avoids running new migrations before the pre-upgrade snapshot.
@@ -29,7 +29,7 @@ A daily backup can lose up to approximately 24 hours of records. Local snapshots
 
 ## Tailscale and PWA
 
-Use host Tailscale Serve with HTTPS forwarding to the loopback application port. Do not enable Funnel. Test the exact HTTPS URL from a phone connected to the tailnet. A browser pointed at an ordinary HTTP LAN IP does not have the same PWA installation capabilities.
+Configure a private HTTPS proxy separately if desired. The Compose example binds to loopback; the Unraid template publishes to the trusted LAN. Restrict that port appropriately for your network. Do not enable Funnel. Test the exact HTTPS URL from a phone connected to the tailnet. A browser pointed at an ordinary HTTP LAN IP does not have the same PWA installation capabilities.
 
 The static app shell is cached by the service worker. API responses are not service-worker cached. A disconnected open page retains its currently displayed values with an offline/connection warning; a fresh offline launch may have no measurements. Reconnect to the tailnet to fetch current data. A new frontend version activates after old app tabs/windows close, avoiding a forced reload mid-use.
 
@@ -37,9 +37,9 @@ The static app shell is cached by the service worker. API responses are not serv
 
 - **Sensor timeouts:** verify its private runtime IP and reachability from the container, not just another LAN device. Check device Wi-Fi signal, HTTP responsiveness, DHCP address changes, and host routing. Do not fill collection gaps with repeated or synthetic samples.
 - **Channels disagree:** inspect the raw A/B values and quality flags. Corrections do not fix a failing particle counter.
-- **Forecast missing:** verify privately configured coordinates and outbound HTTPS connectivity. The System page reports failures without revealing request URLs or location.
+- **Forecast missing:** verify forecasts are enabled, both privately configured coordinates, and outbound HTTPS connectivity. The System page reports failures without revealing request URLs or location.
 - **NowCast missing:** enough complete hourly history has not accumulated. Interval AQI is still available and explicitly labeled.
 - **Historical forecast missing:** no prediction was stored before that hour. The app intentionally avoids presenting a later forecast as an earlier prediction.
 - **Backups failing:** inspect volume free space and ownership. The health endpoint checks the database, while per-job errors are separate on System.
 
-Logs omit sensor payloads, coordinates, address, provider URLs, and connection credentials. The API is read-only; private administration uses a local CLI via stdin.
+Logs omit sensor payloads, coordinates, address, provider URLs, and connection credentials. The API is read-only; private administration uses container template settings or a local CLI via stdin. Supplied environment settings override matching CLI settings at the next startup.
