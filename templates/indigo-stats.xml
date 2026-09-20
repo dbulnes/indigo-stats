@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Container version="2">
+  <Name>indigo-stats</Name>
+  <Repository>ghcr.io/dbulnes/indigo-stats:latest</Repository>
+  <Registry>https://github.com/dbulnes/indigo-stats/pkgs/container/indigo-stats</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/dbulnes/indigo-stats/issues</Support>
+  <Project>https://github.com/dbulnes/indigo-stats</Project>
+  <ReadMe>https://github.com/dbulnes/indigo-stats/blob/main/README.md</ReadMe>
+  <Overview>Private PurpleAir dashboard with minute-level local collection, historical charts, weather and air-quality comparisons, and an installable PWA. Python and SQLite run in one container. Set your sensor's LAN IPv4 address and map /data to persistent local appdata storage. Forecasts are optional and send configured coordinates to Open-Meteo only when enabled. No login is included: use a trusted LAN or private reverse proxy/Tailscale for access; never expose this app directly to the internet. HTTPS is needed for mobile PWA installation. No host services, routes, or Tailscale settings are changed by this container.</Overview>
+  <Category>HomeAutomation: Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:8000]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/dbulnes/indigo-stats/main/web/public/icon-192.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/dbulnes/indigo-stats/main/templates/indigo-stats.xml</TemplateURL>
+  <Beta>true</Beta>
+  <ExtraParams>--init --read-only --tmpfs /tmp --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true --stop-timeout=35 --log-opt=max-size=5m --log-opt=max-file=3</ExtraParams>
+  <Config Name="Web UI port" Target="8000" Default="8765" Mode="tcp" Description="Trusted-LAN HTTP port. Use a private HTTPS reverse proxy for mobile PWA installation. No authentication is included." Type="Port" Display="always" Required="true" Mask="false">8765</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/indigo-stats" Mode="rw" Description="Persistent SQLite database and local backups. Use local SSD-backed appdata; do not use SMB/NFS. Keep this directory when replacing the container." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/indigo-stats</Config>
+  <Config Name="PurpleAir sensor IP" Target="SENSOR_HOST" Default="" Mode="" Description="Your PurpleAir device's private LAN IPv4 address. Reserve its DHCP address. No automatic subnet scanning occurs." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Timezone" Target="TZ" Default="Etc/UTC" Mode="" Description="IANA timezone for charts, such as America/Los_Angeles or Europe/London." Type="Variable" Display="always" Required="true" Mask="false">Etc/UTC</Config>
+  <Config Name="Sensor placement" Target="SENSOR_PLACEMENT" Default="outdoors|indoors" Mode="" Description="Physical installation location. Choose the PM correction separately." Type="Variable" Display="always" Required="true" Mask="false">outdoors</Config>
+  <Config Name="PM2.5 method" Target="PM_METHOD" Default="cf1|epa2021" Mode="" Description="cf1 preserves raw channel-average PM2.5. epa2021 applies the US outdoor correction with raw humidity; it is not the extended wildfire formula." Type="Variable" Display="always" Required="true" Mask="false">cf1</Config>
+  <Config Name="Temperature and humidity" Target="ENVIRONMENT_MODE" Default="purpleair|raw|simple" Mode="" Description="purpleair matches PurpleAir estimated ambient layers. raw shows operating sensor readings. simple applies -8 F and +4 humidity points. Raw values are always retained." Type="Variable" Display="always" Required="true" Mask="false">purpleair</Config>
+  <Config Name="Enable regional forecasts" Target="FORECAST_ENABLED" Default="false|true" Mode="" Description="Enable only after supplying latitude and longitude. Coordinates are sent to Open-Meteo for weather and regional air-quality forecasts; your street address is not sent." Type="Variable" Display="always" Required="true" Mask="false">false</Config>
+  <Config Name="Forecast latitude" Target="FORECAST_LATITUDE" Default="" Mode="" Description="Optional private latitude (-90 to 90). Enter both coordinates or leave both blank. Never publish a filled-in template." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Forecast longitude" Target="FORECAST_LONGITUDE" Default="" Mode="" Description="Optional private longitude (-180 to 180). Coordinates remain out of browser responses." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Private location label/address" Target="LOCATION_ADDRESS" Default="" Mode="" Description="Optional local-only address or label. Not geocoded, sent to providers, or returned to the browser." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Non-root UID for application files. Unraid nobody is normally 99." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="GID for application files. Unraid users is normally 100." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
+</Container>

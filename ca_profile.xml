@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>Indigo Stats is a self-hosted personal environment dashboard for local PurpleAir devices. It combines a React PWA, a Python collector/API, and persistent SQLite in one container. Source, documentation, and support are available in the project repository. This repository contains a beta Docker template; the container image must be published before installation through Community Applications.</Profile>
+  <Icon>https://raw.githubusercontent.com/dbulnes/indigo-stats/main/web/public/icon-192.png</Icon>
+  <WebPage>https://github.com/dbulnes/indigo-stats</WebPage>
+  <Forum>https://github.com/dbulnes/indigo-stats/issues</Forum>
+</CommunityApplications>

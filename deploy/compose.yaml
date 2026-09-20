@@ -1,0 +1,39 @@
+services:
+  indigo-stats:
+    image: ghcr.io/dbulnes/indigo-stats:latest
+    container_name: indigo-stats
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8000"
+    volumes:
+      - "${INDIGO_DATA_DIR:?Set a persistent local appdata directory}:/data"
+    environment:
+      DATA_DIR: /data
+      PUID: "${PUID:-99}"
+      PGID: "${PGID:-100}"
+      SENSOR_HOST: "${SENSOR_HOST:?Set your sensor LAN IP}"
+      TZ: "${TZ:-Etc/UTC}"
+      PM_METHOD: "${PM_METHOD:-cf1}"
+      ENVIRONMENT_MODE: "${ENVIRONMENT_MODE:-purpleair}"
+      FORECAST_ENABLED: "${FORECAST_ENABLED:-false}"
+      FORECAST_LATITUDE: "${FORECAST_LATITUDE:-}"
+      FORECAST_LONGITUDE: "${FORECAST_LONGITUDE:-}"
+    stop_grace_period: 35s
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
