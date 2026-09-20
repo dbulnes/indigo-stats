@@ -8,7 +8,7 @@ This is a development package, not a published Community Applications listing. N
 - `deploy/entrypoint.sh`: initialize dedicated data permissions, then run as PUID/PGID.
 - `templates/indigo-stats.xml`: bridge networking, persistent appdata, sensor/settings fields, and restricted runtime options.
 - `ca_profile.xml`: Community Applications repository metadata.
-- `.github/workflows/check.yml`: tests, frontend build, Docker build, and disposable-volume recreation smoke test.
+- `.github/workflows/check.yml`: native AMD64 and ARM64 backend tests, frontend builds, Docker builds, and disposable-volume recreation smoke tests on every push/PR; also supports manual runs.
 - `.github/workflows/release.yml`: version-tag-triggered public image publishing to GHCR, for Linux amd64. No SSH or server deployment.
 
 ## Before publishing
@@ -41,4 +41,4 @@ Keep the `/data` appdata directory on image upgrades; see [operations](operation
 
 On September 20, 2026, the Linux amd64 image built and ran successfully on local ARM Docker Desktop using emulation. The disposable-volume smoke test passed non-root startup with the template's restricted runtime options, container replacement with retained settings and synthetic readings, SQLite backup integrity, estimated-temperature API output, and PWA asset delivery. All 13 backend tests also passed inside the image as UID 99 with a read-only root filesystem and networking disabled. The native Linux ARM64 image (`indigo-stats:mac-arm64`) subsequently passed the same smoke test and all 13 backend tests without amd64 emulation. Test containers and volumes were removed afterward.
 
-This verifies local Docker behavior, not an Unraid UI installation, real sensor connectivity from Unraid, or phone PWA installation. Docker CI is provided but has not run for unpushed local commits. No image release, server deployment, or CA submission has been performed.
+This verifies local Docker behavior, not an Unraid UI installation, real sensor connectivity from Unraid, or phone PWA installation. The initial AMD64 GitHub Actions run passed; the current workflow also covers native ARM64. The Actions page reports results for each pushed commit. No image release, server deployment, or CA submission has been performed.

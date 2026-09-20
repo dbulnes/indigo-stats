@@ -1,5 +1,7 @@
 # Indigo Stats
 
+[![Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml/badge.svg)](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml)
+
 A private air and weather observatory: React + TypeScript PWA, Python FastAPI, and SQLite, in one Unraid application container. An optional private HTTPS proxy provides PWA access over your tailnet. No Supabase, Google login, or public frontend hosting is required.
 
 ## What it does
@@ -64,6 +66,14 @@ Schema migrations are versioned through `PRAGMA user_version`. Startup refuses t
 - Temperature/humidity default to PurpleAir estimated ambient conversions. The dashboard can switch to raw operating readings or the simple −8°F / +4 humidity-point conversion. Raw values are retained, and PM correction always uses raw humidity. See [temperature correction](docs/temperature-correction.md). Polling every minute does not guarantee that the sensor updates every field each minute.
 - NowCast uses up to 12 completed hourly means, requires at least 45 valid samples per included hour, and at least two valid hours among the latest three. Before that, the UI labels AQI as an interval estimate. AQI values above the scale are shown as 500+ for current readings.
 - Regional AQI comparison is derived from modeled PM2.5 using the same breakpoints, not the overall AQI across all pollutants. Forecast retrieval time is recorded; it is not claimed to be model issuance time.
+
+## GitHub Actions
+
+[Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml) runs automatically on every push and pull request, with native Linux AMD64 (Unraid) and ARM64 (Apple Silicon Docker) jobs. Each job runs backend tests, builds the TypeScript/PWA frontend, builds the Docker image, and checks container startup, persistence, backups, and temperature output using synthetic data.
+
+Push local commits to trigger CI: a push containing multiple commits builds its newest commit once. To run manually, open Actions → Build and test → Run workflow. Open an individual run and job to inspect logs. No extra credentials or secrets are needed for these checks. CI runs on GitHub-hosted machines and does not connect to your sensor or homelab.
+
+Normal builds test images without publishing them. The separate release workflow publishes to GHCR only when a version tag is pushed. Docker Hub publication is not configured in these workflows.
 
 ## Validation
 

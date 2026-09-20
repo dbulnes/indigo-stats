@@ -1,21 +1,49 @@
-name: Validate
-on: [push, pull_request]
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Build and test (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r backend/requirements.lock
-      - run: python -m unittest discover -s backend/tests -v
-      - uses: actions/setup-node@v4
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.lock
+      - name: Test backend
+        run: python -m unittest discover -s backend/tests -v
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: npm ci && npm run build
+      - name: Build TypeScript frontend and PWA
+        run: npm ci && npm run build
         working-directory: web
-      - run: docker build -t indigo-stats:test .
-      - run: sh deploy/smoke-test.sh indigo-stats:test
+      - name: Build native container image
+        run: docker build --platform linux/${{ matrix.arch }} -t davidbulnes/indigo-stats:ci-${{ matrix.arch }} .
+      - name: Test container startup and persistence
+        run: sh deploy/smoke-test.sh davidbulnes/indigo-stats:ci-${{ matrix.arch }}
