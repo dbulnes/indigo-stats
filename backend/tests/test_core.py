@@ -79,6 +79,32 @@ class DatabaseTests(unittest.TestCase):
             self.assertFalse(fields[key].text)
         self.assertEqual(fields['FORECAST_ENABLED'].text,'false')
         self.assertEqual(template.findtext('Privileged'),'false')
+    def test_v1_migration_preserves_raw_readings_and_backup(self):
+        import sqlite3
+        with db.connect() as con:
+            con.execute("INSERT INTO readings(ts,temperature_raw,humidity_raw,method,quality) VALUES(60,81,42,'cf1','')")
+            con.execute('ALTER TABLE readings DROP COLUMN environment_mode')
+            con.execute('PRAGMA user_version=1')
+        db.initialize()
+        with db.connect() as con:
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],2)
+            self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
+        backups=list((db.DATA/'backups').glob('*.sqlite'))
+        self.assertEqual(len(backups),1)
+        with sqlite3.connect(backups[0]) as con:
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],1)
+            self.assertEqual(con.execute('SELECT temperature_raw FROM readings').fetchone()[0],81)
+    def test_private_environment_validation_and_forecast_opt_in(self):
+        from backend.config import import_environment
+        with patch.dict('os.environ',{'FORECAST_ENABLED':'false'},clear=True):
+            import_environment()
+            self.assertIs(db.settings()['forecast_enabled'],False)
+        for env in ({'FORECAST_ENABLED':'yes'}, {'FORECAST_LATITUDE':'private-invalid'}, {'SENSOR_HOST':'private-invalid'}):
+            with patch.dict('os.environ',env,clear=True):
+                with self.assertRaises(ValueError) as error: import_environment()
+                self.assertNotIn('private-invalid',str(error.exception))
+        with patch.dict('os.environ',{'FORECAST_LATITUDE':'10'},clear=True):
+            with self.assertRaises(ValueError): import_environment()
     def test_version_guard(self):
         with db.connect() as con: con.execute('PRAGMA user_version=999')
         with self.assertRaises(RuntimeError): db.initialize()

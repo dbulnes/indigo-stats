@@ -1,11 +1,9 @@
 {
   "sensor_host": "192.168.1.50",
   "address": "SET PRIVATELY — never commit your real address",
-  "latitude": 0,
-  "longitude": 0,
-  "timezone": "America/Los_Angeles",
+  "forecast_enabled": false,
+  "timezone": "Etc/UTC",
   "placement": "outdoors",
-  "pm_method": "epa2021",
-  "temperature_offset_f": 0,
-  "humidity_offset": 0
+  "pm_method": "cf1",
+  "environment_mode": "purpleair"
 }
