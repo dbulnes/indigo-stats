@@ -8,7 +8,7 @@ case "$PUID:$PGID" in *[!0-9:]*|:*|*:) echo 'PUID/PGID must be numeric' >&2; exi
 if [ "$(id -u)" = 0 ]; then
     mkdir -p /data/backups
     chown "$PUID:$PGID" /data /data/backups
-    chmod 700 /data /data/backups
+    gosu "$PUID:$PGID" chmod 700 /data /data/backups
     for item in /data/indigo.sqlite /data/indigo.sqlite-wal /data/indigo.sqlite-shm /data/backups/*.sqlite; do
         [ ! -e "$item" ] || chown "$PUID:$PGID" "$item"
     done

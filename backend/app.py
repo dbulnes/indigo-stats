@@ -50,7 +50,7 @@ def status():
         jobs_status=[dict(r) for r in con.execute('SELECT * FROM job_status ORDER BY name')]
         counts=con.execute('SELECT COUNT(*) n,MIN(ts) first,MAX(ts) last FROM readings').fetchone()
         size=con.execute('PRAGMA page_count').fetchone()[0]*con.execute('PRAGMA page_size').fetchone()[0]
-    return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','America/Los_Angeles'),
+    return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
                 backup_scope='Local snapshots only; off-server backup is not configured',version='0.1.2')
 
 @app.get('/api/latest')

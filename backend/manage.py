@@ -14,10 +14,10 @@ if args.action=='configure':
     allowed={'address','latitude','longitude','sensor_host','timezone','pm_method','placement','environment_mode','forecast_enabled'}
     if set(cfg)-allowed: raise SystemExit('Unknown configuration key')
     try:
-        validate(db.settings()|cfg)
+        validated=validate(db.settings()|cfg)
     except (ValueError, TypeError, KeyError):
         raise SystemExit('Invalid private configuration') from None
-    db.set_settings(cfg)
+    db.set_settings({key:validated[key] for key in cfg})
     print('Private configuration saved. Values omitted.')
 elif args.action=='backup':
     db.backup(); print('Consistent local backup created.')
