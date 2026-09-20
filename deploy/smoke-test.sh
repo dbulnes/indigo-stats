@@ -2,6 +2,9 @@
 # Disposable development/CI volume only. Never targets an installed app.
 set -eu
 image=${1:-indigo-stats:test}
+# Detect the built image so this test supports native ARM Macs and amd64 Unraid.
+platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")
+echo "Testing $image ($platform)"
 name="indigo-smoke-$$"
 volume="$name-data"
 cleanup() {
@@ -11,7 +14,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 docker volume create "$volume" >/dev/null
 start() {
-    docker run -d --platform linux/amd64 --name "$name" --read-only --tmpfs /tmp --init \
+    docker run -d --platform "$platform" --name "$name" --read-only --tmpfs /tmp --init \
         --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
         --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
         -e DISABLE_JOBS=1 -e PUID=99 -e PGID=100 \
