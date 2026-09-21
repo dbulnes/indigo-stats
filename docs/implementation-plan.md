@@ -13,7 +13,7 @@ The current architecture is React/TypeScript PWA + Python FastAPI and jobs + emb
 
 ## Distribution
 
-Prepare a public GHCR image, generic Unraid template, repository profile, and owner-triggered release workflow. Community Applications publication is a separate review/submission step. Do not deploy to a user server as part of development.
+Prepare a public container image and owner-triggered release workflow here. Maintain the generic Unraid template, repository profile, packaging license, and Community Applications submission materials in the separate `dbulnes/indigo-stats-unraid` repository. Do not deploy to a user server as part of development.
 
 ## Validation and handoff
 

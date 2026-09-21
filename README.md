@@ -43,11 +43,11 @@ For frontend hot reload, run `npm run dev --prefix web`; Vite proxies `/api` to 
 
 ## Unraid application package
 
-**Local development draft: the image and Community Applications listing are not published yet.** The package consists of `Dockerfile`, `templates/indigo-stats.xml`, `ca_profile.xml`, and a tag-triggered GHCR release workflow. See [distribution instructions](docs/unraid-distribution.md) for testing, publishing, and submission.
+Community Applications metadata is maintained separately in [dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid). This repository owns the application source, Dockerfile, runtime documentation, tests, and image release workflow. The packaging repository owns the Unraid template, icon, CA profile, packaging license, and submission documentation.
 
-When an image is available, install it through Unraid's Docker interface using the template. Choose a dedicated persistent local appdata directory, enter your sensor's LAN IPv4 address and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Installation is controlled by the server owner; this repository does not deploy to a host automatically.
+When a public image is available, install it through Unraid using the separate template. Choose a dedicated persistent local appdata directory, enter your sensor's LAN IPv4 address and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Neither repository deploys to a host automatically.
 
-Forecasts default to disabled. To enable them, provide both private coordinates and set `FORECAST_ENABLED=true`. Coordinates are sent to Open-Meteo; the optional address is stored locally and is not geocoded or sent. Address, coordinates, and raw sensor network metadata are omitted from dashboard APIs. Private settings are stored in SQLite; environment settings supplied on startup take precedence. Removing an environment value does not erase a stored setting; explicitly disable forecasts to stop requests.
+Forecasts default to disabled. To enable them, provide both private coordinates and set `FORECAST_ENABLED=true`. Coordinates are sent to Open-Meteo. Coordinates and raw sensor network metadata are omitted from dashboard APIs. Private settings are stored in SQLite; environment settings supplied on startup take precedence. Removing an environment value does not erase a stored setting; explicitly disable forecasts to stop requests.
 
 Never commit filled templates, environment files, databases, backups, or real sensor payloads. Unraid administrators can inspect container variables and appdata even when template fields are masked. For CLI administration, pipe a private JSON file into `python -m backend.manage configure`; use `deploy/private-config.example.json` only as a generic starting point.
 
@@ -73,7 +73,7 @@ Schema migrations are versioned through `PRAGMA user_version`. Startup refuses t
 
 Push local commits to trigger CI: a push containing multiple commits builds its newest commit once. To run manually, open Actions → Build and test → Run workflow. Open an individual run and job to inspect logs. No extra credentials or secrets are needed for these checks. CI runs on GitHub-hosted machines and does not connect to your sensor or homelab.
 
-Normal builds test images without publishing them. The separate release workflow publishes to GHCR only when a version tag is pushed. Docker Hub publication is not configured in these workflows.
+Normal builds test images without publishing them. The separate release workflow publishes a multi-architecture image to Docker Hub only when a version tag is pushed. Before the first release, add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; use a Docker Hub access token with write permission rather than an account password.
 
 ## Validation
 

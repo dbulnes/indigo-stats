@@ -71,14 +71,6 @@ class DatabaseTests(unittest.TestCase):
             raw=client.get('/api/history?start=0&end=120&environment=raw').json()['points'][0]
             self.assertAlmostEqual(estimated['temperature'],73.4637)
             self.assertEqual(raw['temperature'],81)
-    def test_template_private_defaults_are_empty(self):
-        import xml.etree.ElementTree as ET
-        template=ET.parse(Path(__file__).parents[2]/'templates'/'indigo-stats.xml').getroot()
-        fields={e.attrib['Target']:e for e in template.findall('Config')}
-        for key in ('SENSOR_HOST','FORECAST_LATITUDE','FORECAST_LONGITUDE','LOCATION_ADDRESS'):
-            self.assertFalse(fields[key].text)
-        self.assertEqual(fields['FORECAST_ENABLED'].text,'false')
-        self.assertEqual(template.findtext('Privileged'),'false')
     def test_v1_migration_preserves_raw_readings_and_backup(self):
         import sqlite3
         with db.connect() as con:
