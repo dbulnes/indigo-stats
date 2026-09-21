@@ -126,7 +126,7 @@ export function SystemSettings() {
     </div>
     <div className="form-group"><label>Forecast Enabled</label><select name="FORECAST_ENABLED" value={settings.FORECAST_ENABLED||'false'} onChange={handleChange}><option value="true">True</option><option value="false">False</option></select></div>
     
-    <div className="form-group" style={{padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px', position: 'relative', border: '1px solid var(--border)'}}>
+    <div className="form-group" style={{padding: '16px', background: '#172130', borderRadius: '8px', position: 'relative', border: '1px solid #2b3646'}}>
       <label style={{marginBottom: '4px'}}>Forecast Location (Lat/Lon)</label>
       <p style={{fontSize: '0.85em', opacity: 0.7, margin: '0 0 12px 0'}}>
         {settings.HAS_FORECAST_LOCATION === 'true' && !settings.FORECAST_LATITUDE 
@@ -148,8 +148,8 @@ export function SystemSettings() {
             left: 0, 
             right: 0,
             zIndex: 50, 
-            background: 'var(--bg-primary)', 
-            border: '1px solid var(--border)', 
+            background: '#1a2332', 
+            border: '1px solid #3b4a60', 
             borderRadius: '6px', 
             marginTop: '4px', 
             maxHeight: '220px', 
@@ -163,15 +163,15 @@ export function SystemSettings() {
                 style={{
                   padding: '12px 16px', 
                   cursor: 'pointer', 
-                  borderBottom: i === results.length - 1 ? 'none' : '1px solid var(--border)', 
+                  borderBottom: i === results.length - 1 ? 'none' : '1px solid #2b3646', 
                   display: 'flex',
                   alignItems: 'center',
                   transition: 'background 0.15s ease'
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#26354a')}
                 onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <span style={{fontSize: '0.95em', color: 'var(--text-primary)'}}>{r.text}</span>
+                <span style={{fontSize: '0.95em', color: '#d2dbea'}}>{r.text}</span>
               </div>
             ))}
           </div>
