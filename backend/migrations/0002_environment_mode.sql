@@ -1,0 +1,3 @@
+BEGIN IMMEDIATE;
+ALTER TABLE readings ADD COLUMN environment_mode TEXT NOT NULL DEFAULT 'raw';
+COMMIT;

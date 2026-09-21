@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from pathlib import Path
 
 DATA = Path(os.getenv('DATA_DIR', '/data'))
-SCHEMA_VERSION = 4
 
 @contextmanager
 def connect():
@@ -42,67 +41,29 @@ def backup():
 def initialize():
     DATA.mkdir(parents=True, exist_ok=True)
     os.chmod(DATA, 0o700)
+    
     with connect() as con:
         version = con.execute('PRAGMA user_version').fetchone()[0]
-    if version > SCHEMA_VERSION:
+    
+    migrations_dir = Path(__file__).parent / 'migrations'
+    migrations = sorted([f for f in migrations_dir.glob('*.sql')])
+    target_version = len(migrations)
+    
+    if version > target_version:
         raise RuntimeError('Database is newer than this image. Restore a matching backup to roll back.')
-    if version and version < SCHEMA_VERSION:
+    if version and version < target_version:
         backup()
+        
     with connect() as con:
         con.execute('PRAGMA journal_mode=WAL')
-        if version == 0:
-            con.executescript('''
-                BEGIN IMMEDIATE;
-                CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-                CREATE TABLE readings (
-                    ts INTEGER PRIMARY KEY, source_ts TEXT,
-                    temperature REAL, humidity REAL,
-                    temperature_raw REAL, humidity_raw REAL,
-                    pm_a REAL, pm_b REAL, pm25 REAL,
-                    method TEXT NOT NULL, quality TEXT NOT NULL
-                );
-                CREATE TABLE raw_samples (ts INTEGER PRIMARY KEY, payload TEXT NOT NULL);
-                CREATE TABLE forecasts (
-                    fetched INTEGER NOT NULL, valid INTEGER NOT NULL,
-                    kind TEXT NOT NULL, temperature REAL, humidity REAL, pm25 REAL,
-                    PRIMARY KEY(kind, valid, fetched)
-                );
-                CREATE INDEX forecast_time ON forecasts(valid, kind, fetched DESC);
-                CREATE TABLE job_status (
-                    name TEXT PRIMARY KEY, last_attempt INTEGER, last_success INTEGER, error TEXT
-                );
-                CREATE TABLE summaries (
-                    bucket INTEGER NOT NULL, span INTEGER NOT NULL, n INTEGER NOT NULL,
-                    temperature REAL, humidity REAL, pm25 REAL,
-                    temp_min REAL, temp_max REAL, pm_min REAL, pm_max REAL,
-                    PRIMARY KEY(span,bucket)
-                );
-                PRAGMA user_version=1;
-                COMMIT;
-            ''')
-        if version < 2:
-            con.executescript('''
-                BEGIN IMMEDIATE;
-                ALTER TABLE readings ADD COLUMN environment_mode TEXT NOT NULL DEFAULT 'raw';
-                PRAGMA user_version=2;
-                COMMIT;
-            ''')
-        if version < 3:
-            con.executescript('''
-                BEGIN IMMEDIATE;
-                ALTER TABLE forecasts ADD COLUMN uv_index REAL;
-                ALTER TABLE forecasts ADD COLUMN precipitation_probability REAL;
-                PRAGMA user_version=3;
-                COMMIT;
-            ''')
-        if version < 4:
-            con.executescript('''
-                BEGIN IMMEDIATE;
-                ALTER TABLE forecasts ADD COLUMN aqi REAL;
-                PRAGMA user_version=4;
-                COMMIT;
-            ''')
+        for i in range(version, target_version):
+            script_path = migrations[i]
+            with open(script_path, 'r') as f:
+                con.executescript(f.read())
+            con.execute(f'PRAGMA user_version={i + 1}')
+            
     os.chmod(DATA / 'indigo.sqlite', 0o600)
+
 
 def settings():
     with connect() as con:
