@@ -1,6 +1,6 @@
 services:
   indigo-stats:
-    image: ghcr.io/dbulnes/indigo-stats:latest
+    image: davidbulnes/indigo-stats:latest
     container_name: indigo-stats
     init: true
     restart: unless-stopped
