@@ -40,5 +40,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # GHCR displays these attestations as a non-runnable unknown/unknown manifest.
           sbom: true
           provenance: mode=max

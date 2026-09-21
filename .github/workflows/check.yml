@@ -10,17 +10,9 @@ permissions:
 
 jobs:
   test:
-    name: Build and test (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
+    name: Build and test (Unraid AMD64)
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-          - arch: arm64
-            runner: ubuntu-24.04-arm
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -46,6 +38,6 @@ jobs:
         run: npm ci && npm run build
         working-directory: web
       - name: Build native container image
-        run: docker build --platform linux/${{ matrix.arch }} -t indigo-stats-ci:${{ matrix.arch }} .
+        run: docker build --platform linux/amd64 -t indigo-stats-ci:amd64 .
       - name: Test container startup and persistence
-        run: sh deploy/smoke-test.sh indigo-stats-ci:${{ matrix.arch }}
+        run: sh deploy/smoke-test.sh indigo-stats-ci:amd64

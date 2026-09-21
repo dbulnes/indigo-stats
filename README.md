@@ -69,11 +69,13 @@ Schema migrations are versioned through `PRAGMA user_version`. Startup refuses t
 
 ## GitHub Actions
 
-[Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml) runs automatically on every push and pull request, with native Linux AMD64 (Unraid) and ARM64 (Apple Silicon Docker) jobs. Each job runs backend tests, builds the TypeScript/PWA frontend, builds the Docker image, and checks container startup, persistence, backups, and temperature output using synthetic data.
+[Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml) runs automatically on every push and pull request as one native Linux AMD64 job matching Unraid. It runs backend tests, builds the TypeScript/PWA frontend, builds the Docker image, and checks container startup, persistence, backups, and temperature output using synthetic data. Build and smoke-test ARM64 locally on an Apple Silicon Mac when needed.
 
 Push local commits to trigger CI: a push containing multiple commits builds its newest commit once. To run manually, open Actions → Build and test → Run workflow. Open an individual run and job to inspect logs. No extra credentials or secrets are needed for these checks. CI runs on GitHub-hosted machines and does not connect to your sensor or homelab.
 
-Normal builds test images without publishing them. The separate release workflow publishes a `linux/amd64` image for Unraid to GitHub Container Registry only when a version tag is pushed. ARM64 images are built only for local Mac testing and per-commit CI. Publishing uses GitHub Actions' short-lived built-in `GITHUB_TOKEN` with `packages: write`; no Docker Hub account or repository secrets are required. After the first release, make the GHCR package public so Unraid can pull it anonymously.
+Normal builds test images without publishing them. The separate release workflow publishes a `linux/amd64` image for Unraid to GitHub Container Registry only when a version tag is pushed. ARM64 images are built only for local Mac testing. Publishing uses GitHub Actions' short-lived built-in `GITHUB_TOKEN` with `packages: write`; no Docker Hub account or repository secrets are required. After the first release, make the GHCR package public so Unraid can pull it anonymously.
+
+GHCR may list a second `unknown/unknown` entry beside `linux/amd64`. It is the non-runnable SBOM and build-provenance attestation attached by BuildKit, not another application image or supported platform.
 
 Prepare a release version with one command from the repository root:
 

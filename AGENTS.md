@@ -51,7 +51,7 @@ sh deploy/smoke-test.sh indigo-stats:unraid-amd64
 
 The smoke test must use a disposable volume and verify non-root startup, health, persistence after container recreation, backup integrity, temperature conversion, and PWA assets. Do not point it at an installed appdata directory.
 
-Make small, coherent commits. Run checks appropriate to the changed files before pushing. Every push and pull request runs native AMD64 and ARM64 CI; ordinary commits do not publish images.
+Make small, coherent commits. Run checks appropriate to the changed files before pushing. Every push and pull request runs one native AMD64 CI job matching Unraid; ordinary commits do not publish images. ARM64 container verification is local-only on Apple Silicon Macs.
 
 ## Release process
 
@@ -62,7 +62,9 @@ Make small, coherent commits. Run checks appropriate to the changed files before
 5. The tag-triggered release workflow publishes **only `linux/amd64`** to `ghcr.io/dbulnes/indigo-stats`, with version, major/minor, and (for stable releases) `latest` tags. It authenticates with GitHub Actions' short-lived `GITHUB_TOKEN`; do not add Docker Hub credentials or custom registry secrets.
 6. Confirm the GHCR package remains public, inspect the manifest for `linux/amd64`, pull it anonymously, and run `deploy/smoke-test.sh ghcr.io/dbulnes/indigo-stats:latest`.
 
-ARM64 images are for local Mac testing and per-commit CI. They are not published as releases.
+ARM64 images are for local Mac testing only. They are not built in per-commit CI or published as releases.
+
+The release image index also contains a non-runnable `unknown/unknown` attestation manifest for its SBOM and build provenance. Preserve those attestations; they do not add a supported runtime architecture.
 
 ## How Unraid updates work
 
