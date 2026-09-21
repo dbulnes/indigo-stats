@@ -73,7 +73,7 @@ Schema migrations are versioned through `PRAGMA user_version`. Startup refuses t
 
 Push local commits to trigger CI: a push containing multiple commits builds its newest commit once. To run manually, open Actions → Build and test → Run workflow. Open an individual run and job to inspect logs. No extra credentials or secrets are needed for these checks. CI runs on GitHub-hosted machines and does not connect to your sensor or homelab.
 
-Normal builds test images without publishing them. The separate release workflow publishes a multi-architecture image to Docker Hub only when a version tag is pushed. Before the first release, add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; use a Docker Hub access token with write permission rather than an account password.
+Normal builds test images without publishing them. The separate release workflow publishes a `linux/amd64` image for Unraid to Docker Hub only when a version tag is pushed. ARM64 images are built only for local Mac testing and per-commit CI. Before the first release, add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`; use a Docker Hub access token with write permission rather than an account password.
 
 ## Validation
 
