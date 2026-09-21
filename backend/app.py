@@ -54,6 +54,30 @@ def status():
     return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
                 backup_scope='Local snapshots only; off-server backup is not configured',version=APP_VERSION)
 
+@app.get('/api/settings')
+def get_settings():
+    from .config import ENV_FIELDS
+    s = db.settings()
+    return {env: s.get(key) for env, (key, _) in ENV_FIELDS.items()}
+
+@app.post('/api/settings')
+def post_settings(data: dict):
+    from .config import validate, ENV_FIELDS
+    update = {}
+    for env, (key, cast) in ENV_FIELDS.items():
+        if env in data and data[env] is not None and str(data[env]).strip() != '':
+            try:
+                update[key] = cast(str(data[env]))
+            except ValueError:
+                raise HTTPException(400, f'Invalid value for {env}')
+    merged = db.settings() | update
+    try:
+        validate(merged)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    db.set_settings(update)
+    return {'ok': True}
+
 @app.get('/api/latest')
 def latest(environment:Literal['purpleair','raw','simple']|None=None):
     mode=environment or db.settings().get('environment_mode','purpleair')

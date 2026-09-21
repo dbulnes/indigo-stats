@@ -46,7 +46,7 @@ async def weather():
     now=int(time.time())
     async with httpx.AsyncClient(timeout=30,trust_env=False) as client:
         for kind,url,params in [
-            ('weather','https://api.open-meteo.com/v1/forecast',dict(hourly='temperature_2m,relative_humidity_2m',temperature_unit='fahrenheit')),
+            ('weather','https://api.open-meteo.com/v1/forecast',dict(hourly='temperature_2m,relative_humidity_2m,uv_index,precipitation_probability',temperature_unit='fahrenheit')),
             ('air','https://air-quality-api.open-meteo.com/v1/air-quality',dict(hourly='pm2_5'))]:
             response=await client.get(url,params=common|params)
             response.raise_for_status()
@@ -54,13 +54,13 @@ async def weather():
             rows=[]
             for i,t in enumerate(h['time']):
                 val=lambda key,low=0,high=10000: number(h.get(key,[None]*len(h['time']))[i],low,high)
-                rows.append((now,t,kind,val('temperature_2m',-100,200),val('relative_humidity_2m',0,100),val('pm2_5')))
+                rows.append((now,t,kind,val('temperature_2m',-100,200),val('relative_humidity_2m',0,100),val('pm2_5'),val('uv_index',0,50),val('precipitation_probability',0,100)))
             await asyncio.to_thread(store_forecasts,rows)
     await asyncio.to_thread(db.status,'weather',success=True)
 
 def store_forecasts(rows):
     with db.connect() as con:
-        con.executemany('INSERT OR REPLACE INTO forecasts VALUES (?,?,?,?,?,?)',rows)
+        con.executemany('INSERT OR REPLACE INTO forecasts VALUES (?,?,?,?,?,?,?,?)',rows)
 
 def maintenance():
     now=int(time.time())

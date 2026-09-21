@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 DATA = Path(os.getenv('DATA_DIR', '/data'))
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 @contextmanager
 def connect():
@@ -85,6 +85,14 @@ def initialize():
                 BEGIN IMMEDIATE;
                 ALTER TABLE readings ADD COLUMN environment_mode TEXT NOT NULL DEFAULT 'raw';
                 PRAGMA user_version=2;
+                COMMIT;
+            ''')
+        if version < 3:
+            con.executescript('''
+                BEGIN IMMEDIATE;
+                ALTER TABLE forecasts ADD COLUMN uv_index REAL;
+                ALTER TABLE forecasts ADD COLUMN precipitation_probability REAL;
+                PRAGMA user_version=3;
                 COMMIT;
             ''')
     os.chmod(DATA / 'indigo.sqlite', 0o600)
