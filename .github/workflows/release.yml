@@ -13,6 +13,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: node scripts/bump-version.mjs --check
       - run: pip install -r backend/requirements.lock
       - run: python -m unittest discover -s backend/tests -v
       - uses: docker/setup-buildx-action@v3

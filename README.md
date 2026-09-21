@@ -75,6 +75,14 @@ Push local commits to trigger CI: a push containing multiple commits builds its 
 
 Normal builds test images without publishing them. The separate release workflow publishes a `linux/amd64` image for Unraid to GitHub Container Registry only when a version tag is pushed. ARM64 images are built only for local Mac testing and per-commit CI. Publishing uses GitHub Actions' short-lived built-in `GITHUB_TOKEN` with `packages: write`; no Docker Hub account or repository secrets are required. After the first release, make the GHCR package public so Unraid can pull it anonymously.
 
+Prepare a release version with one command from the repository root:
+
+```sh
+node scripts/bump-version.mjs patch
+```
+
+Use `major`, `minor`, `patch`, or an explicit semantic version such as `0.2.0`. The command updates the frontend package metadata, lockfile, and backend API version together. CI runs `node scripts/bump-version.mjs --check` to reject version drift.
+
 ## Validation
 
 ```sh

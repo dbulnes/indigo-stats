@@ -12,6 +12,8 @@ from . import db,jobs,config
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
+APP_VERSION = '0.1.2'
+
 @asynccontextmanager
 async def lifespan(app):
     db.initialize()
@@ -42,7 +44,7 @@ async def headers(request,call_next):
 @app.get('/api/health')
 def health():
     with db.connect() as con: con.execute('SELECT 1').fetchone()
-    return {'ok':True,'version':'0.1.2'}
+    return {'ok':True,'version':APP_VERSION}
 
 @app.get('/api/status')
 def status():
@@ -51,7 +53,7 @@ def status():
         counts=con.execute('SELECT COUNT(*) n,MIN(ts) first,MAX(ts) last FROM readings').fetchone()
         size=con.execute('PRAGMA page_count').fetchone()[0]*con.execute('PRAGMA page_size').fetchone()[0]
     return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
-                backup_scope='Local snapshots only; off-server backup is not configured',version='0.1.2')
+                backup_scope='Local snapshots only; off-server backup is not configured',version=APP_VERSION)
 
 @app.get('/api/latest')
 def latest(environment:Literal['purpleair','raw','simple']|None=None):

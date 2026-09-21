@@ -55,7 +55,7 @@ Make small, coherent commits. Run checks appropriate to the changed files before
 
 ## Release process
 
-1. Choose a semantic version and update every application version location before committing. At minimum, update `web/package.json`, `web/package-lock.json`, and the API/status version constants in `backend/app.py`.
+1. Choose a semantic version and run `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>`. The command updates `web/package.json`, `web/package-lock.json`, and `backend/app.py` together. Do not edit those versions separately.
 2. Update release notes or user-facing documentation for material behavior, migration, configuration, or operational changes.
 3. Commit to `main`, push, and wait for the `Build and test` workflow to pass.
 4. Create an annotated, immutable tag `vX.Y.Z` on that exact tested `main` commit and push the tag. Never move or reuse a published release tag.

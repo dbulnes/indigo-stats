@@ -40,6 +40,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Check synchronized application version
+        run: node scripts/bump-version.mjs --check
       - name: Build TypeScript frontend and PWA
         run: npm ci && npm run build
         working-directory: web
