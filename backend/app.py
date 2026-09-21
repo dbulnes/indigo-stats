@@ -62,14 +62,15 @@ def get_settings():
         'PM_METHOD': s.get('pm_method'),
         'ENVIRONMENT_MODE': s.get('environment_mode'),
         'SENSOR_PLACEMENT': s.get('placement'),
-        'TZ': s.get('timezone')
+        'TZ': s.get('timezone'),
+        'HAS_FORECAST_LOCATION': 'latitude' in s and 'longitude' in s
     }
 
 @app.post('/api/settings')
 def post_settings(data: dict):
     from .config import validate, ENV_FIELDS
     update = {}
-    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ']
+    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST']
     for env in allowed:
         if env in data and data[env] is not None and str(data[env]).strip() != '':
             key, cast = ENV_FIELDS[env]
