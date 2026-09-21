@@ -77,13 +77,15 @@ Normal builds test images without publishing them. The separate release workflow
 
 GHCR may list a second `unknown/unknown` entry beside `linux/amd64`. It is the non-runnable SBOM and build-provenance attestation attached by BuildKit, not another application image or supported platform.
 
-Prepare a release version with one command from the repository root:
+Release with one command from the repository root:
 
 ```sh
-node scripts/bump-version.mjs patch
+sh scripts/release.sh patch
 ```
 
-Use `major`, `minor`, `patch`, or an explicit semantic version such as `0.2.0`. The command updates the frontend package metadata, lockfile, and backend API version together. CI runs `node scripts/bump-version.mjs --check` to reject version drift.
+Use `major`, `minor`, `patch`, or an explicit semantic version such as `0.3.0`. The script bumps the version across `web/package.json`, `web/package-lock.json`, and `backend/app.py`, commits, pushes to `main`, waits for CI to pass (requires [GitHub CLI](https://cli.github.com/)), then creates and pushes an annotated `vX.Y.Z` tag to trigger the release workflow. It refuses to proceed on a dirty tree, a non-main branch, or when local and remote histories diverge.
+
+To bump the version without releasing, use `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>` directly. CI runs `node scripts/bump-version.mjs --check` to reject version drift.
 
 ## Validation
 

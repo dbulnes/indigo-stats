@@ -55,12 +55,11 @@ Make small, coherent commits. Run checks appropriate to the changed files before
 
 ## Release process
 
-1. Choose a semantic version and run `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>`. The command updates `web/package.json`, `web/package-lock.json`, and `backend/app.py` together. Do not edit those versions separately.
-2. Update release notes or user-facing documentation for material behavior, migration, configuration, or operational changes.
-3. Commit to `main`, push, and wait for the `Build and test` workflow to pass.
-4. Create an annotated, immutable tag `vX.Y.Z` on that exact tested `main` commit and push the tag. Never move or reuse a published release tag.
-5. The tag-triggered release workflow publishes **only `linux/amd64`** to `ghcr.io/dbulnes/indigo-stats`, with version, major/minor, and (for stable releases) `latest` tags. It authenticates with GitHub Actions' short-lived `GITHUB_TOKEN`; do not add Docker Hub credentials or custom registry secrets.
-6. Confirm the GHCR package remains public, inspect the manifest for `linux/amd64`, pull it anonymously, and run `deploy/smoke-test.sh ghcr.io/dbulnes/indigo-stats:latest`.
+Run `sh scripts/release.sh <major|minor|patch|X.Y.Z>` from the repository root. The script bumps `web/package.json`, `web/package-lock.json`, and `backend/app.py` together, commits to `main`, pushes, waits for the `Build and test` workflow to pass (requires the GitHub CLI), then creates and pushes an annotated `vX.Y.Z` tag. Do not edit version files individually or move/reuse a published release tag.
+
+To bump the version without releasing, run `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>` directly. Update release notes or user-facing documentation for material behavior, migration, configuration, or operational changes before releasing.
+
+The tag-triggered release workflow publishes **only `linux/amd64`** to `ghcr.io/dbulnes/indigo-stats`, with version, major/minor, and (for stable releases) `latest` tags. It authenticates with GitHub Actions' short-lived `GITHUB_TOKEN`; do not add Docker Hub credentials or custom registry secrets. After publishing, confirm the GHCR package remains public, inspect the manifest for `linux/amd64`, pull it anonymously, and run `deploy/smoke-test.sh ghcr.io/dbulnes/indigo-stats:latest`.
 
 ARM64 images are for local Mac testing only. They are not built in per-commit CI or published as releases.
 
