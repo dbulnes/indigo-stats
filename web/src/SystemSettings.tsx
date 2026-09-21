@@ -35,6 +35,20 @@ export function SystemSettings() {
     setSaving(false)
   }
   
+  const updateTimezone = async (lat: string, lon: string) => {
+    if (!lat || !lon) return
+    try {
+      const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
+      const tzData = await tzRes.json()
+      if (tzData.timezone) {
+        setSettings(s => ({...s, TZ: tzData.timezone}))
+        setLookupState(`Auto-selected timezone: ${tzData.timezone}`)
+      }
+    } catch (e) {
+      // Ignore background errors
+    }
+  }
+
   const lookupAddress = async (e:React.MouseEvent) => {
     e.preventDefault()
     if (!address) return
@@ -44,15 +58,10 @@ export function SystemSettings() {
         headers: {'User-Agent': 'IndigoStats/1.0'}
       })
       const data = await res.json()
-      if (!data.length) throw new Error('Address not found')
+      if (!data.length) throw new Error('Address not found. Try entering just the city and zip code.')
       const lat = data[0].lat, lon = data[0].lon
-      
-      const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
-      const tzData = await tzRes.json()
-      const tz = tzData.timezone || settings.TZ
-      
-      setSettings({...settings, FORECAST_LATITUDE: lat, FORECAST_LONGITUDE: lon, TZ: tz})
-      setLookupState(`Found coordinates. Auto-selected timezone: ${tz}`)
+      setSettings(s => ({...s, FORECAST_LATITUDE: lat, FORECAST_LONGITUDE: lon}))
+      await updateTimezone(lat, lon)
       setAddress('') // Clear the address so it isn't "stored"
     } catch(e:any) {
       setLookupState('Error: ' + e.message)
@@ -60,6 +69,13 @@ export function SystemSettings() {
   }
 
   const handleChange = (e:any) => setSettings({...settings, [e.target.name]: e.target.value})
+  const handleBlur = (e:any) => {
+    if (e.target.name === 'FORECAST_LATITUDE' || e.target.name === 'FORECAST_LONGITUDE') {
+      const lat = e.target.name === 'FORECAST_LATITUDE' ? e.target.value : settings.FORECAST_LATITUDE;
+      const lon = e.target.name === 'FORECAST_LONGITUDE' ? e.target.value : settings.FORECAST_LONGITUDE;
+      updateTimezone(lat, lon);
+    }
+  }
   
   if (loading) return <div>Loading settings...</div>
   return <form onSubmit={save} className="settings-form">
@@ -81,13 +97,13 @@ export function SystemSettings() {
           : 'Set coordinates to enable regional forecasting.'}
       </p>
       <div style={{display: 'flex', gap: '8px', marginBottom: '8px'}}>
-        <input value={address} onChange={e=>setAddress(e.target.value)} placeholder="Type an address or city..." style={{flex: 1}}/>
+        <input value={address} onChange={e=>setAddress(e.target.value)} placeholder="Type a city or address..." style={{flex: 1}}/>
         <button type="button" onClick={lookupAddress}>Lookup</button>
       </div>
       {lookupState && <div style={{fontSize: '0.85em', color: '#70d8c2', marginBottom: '8px'}}>{lookupState}</div>}
       <div style={{display: 'flex', gap: '8px'}}>
-        <input name="FORECAST_LATITUDE" value={settings.FORECAST_LATITUDE||''} onChange={handleChange} placeholder="Latitude"/>
-        <input name="FORECAST_LONGITUDE" value={settings.FORECAST_LONGITUDE||''} onChange={handleChange} placeholder="Longitude"/>
+        <input name="FORECAST_LATITUDE" value={settings.FORECAST_LATITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Latitude"/>
+        <input name="FORECAST_LONGITUDE" value={settings.FORECAST_LONGITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Longitude"/>
       </div>
     </div>
     
