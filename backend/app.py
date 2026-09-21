@@ -12,7 +12,7 @@ from . import db,jobs,config
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
-APP_VERSION = '0.2.5'
+APP_VERSION = '0.2.6'
 @asynccontextmanager
 async def lifespan(app):
     db.initialize()
