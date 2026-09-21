@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 
 export function SystemSettings() {
   const [settings, setSettings] = useState<Record<string,string>>({})
@@ -7,6 +7,8 @@ export function SystemSettings() {
   const [msg, setMsg] = useState({text:'', type:''})
   const [address, setAddress] = useState('')
   const [lookupState, setLookupState] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const dropdownRef = useRef<HTMLDivElement>(null)
   
   const timezones = typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['America/Los_Angeles', 'America/New_York', 'UTC'];
   
@@ -18,6 +20,48 @@ export function SystemSettings() {
     })
   }, [])
   
+  useEffect(() => {
+    if (!address.trim()) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`)
+        const data = await res.json()
+        setResults(data || [])
+      } catch (e) {
+        setResults([])
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [address])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setResults([])
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectResult = async (r: any) => {
+    setAddress('')
+    setResults([])
+    setLookupState('Selecting location...')
+    
+    let tz = r.timezone
+    if (!tz) {
+      try {
+        const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${r.latitude}&longitude=${r.longitude}&current=temperature_2m&timezone=auto`)
+        const tzData = await tzRes.json()
+        tz = tzData.timezone
+      } catch(e) {}
+    }
+    
+    setSettings(s => ({...s, FORECAST_LATITUDE: String(r.latitude), FORECAST_LONGITUDE: String(r.longitude), TZ: tz || s.TZ}))
+    setLookupState(`Selected ${r.name}. Auto-selected timezone: ${tz || 'None'}`)
+  }
+
   const save = async (e:React.FormEvent) => {
     e.preventDefault()
     setSaving(true); setMsg({text:'', type:''})
@@ -49,25 +93,6 @@ export function SystemSettings() {
     }
   }
 
-  const lookupAddress = async (e:React.MouseEvent) => {
-    e.preventDefault()
-    if (!address) return
-    setLookupState('Looking up...')
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, {
-        headers: {'User-Agent': 'IndigoStats/1.0'}
-      })
-      const data = await res.json()
-      if (!data.length) throw new Error('Address not found. Try entering just the city and zip code.')
-      const lat = data[0].lat, lon = data[0].lon
-      setSettings(s => ({...s, FORECAST_LATITUDE: lat, FORECAST_LONGITUDE: lon}))
-      await updateTimezone(lat, lon)
-      setAddress('') // Clear the address so it isn't "stored"
-    } catch(e:any) {
-      setLookupState('Error: ' + e.message)
-    }
-  }
-
   const handleChange = (e:any) => setSettings({...settings, [e.target.name]: e.target.value})
   const handleBlur = (e:any) => {
     if (e.target.name === 'FORECAST_LATITUDE' || e.target.name === 'FORECAST_LONGITUDE') {
@@ -89,21 +114,69 @@ export function SystemSettings() {
     </div>
     <div className="form-group"><label>Forecast Enabled</label><select name="FORECAST_ENABLED" value={settings.FORECAST_ENABLED||'false'} onChange={handleChange}><option value="true">True</option><option value="false">False</option></select></div>
     
-    <div className="form-group" style={{padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px'}}>
-      <label>Forecast Location (Lat/Lon)</label>
-      <p style={{fontSize: '0.85em', opacity: 0.7, margin: '0 0 10px 0'}}>
+    <div className="form-group" style={{padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px', position: 'relative', border: '1px solid var(--border)'}}>
+      <label style={{marginBottom: '4px'}}>Forecast Location (Lat/Lon)</label>
+      <p style={{fontSize: '0.85em', opacity: 0.7, margin: '0 0 12px 0'}}>
         {settings.HAS_FORECAST_LOCATION === 'true' && !settings.FORECAST_LATITUDE 
           ? 'Coordinates are currently configured (hidden for privacy).' 
           : 'Set coordinates to enable regional forecasting.'}
       </p>
-      <div style={{display: 'flex', gap: '8px', marginBottom: '8px'}}>
-        <input value={address} onChange={e=>setAddress(e.target.value)} placeholder="Type a city or address..." style={{flex: 1}}/>
-        <button type="button" onClick={lookupAddress}>Lookup</button>
+      
+      <div style={{position: 'relative'}} ref={dropdownRef}>
+        <input 
+          value={address} 
+          onChange={e=>setAddress(e.target.value)} 
+          placeholder="Type a city or US street address..." 
+          style={{width: '100%', marginBottom: '12px'}}
+        />
+        {results.length > 0 && (
+          <div style={{
+            position: 'absolute', 
+            top: '100%', 
+            left: 0, 
+            right: 0,
+            zIndex: 50, 
+            background: 'var(--bg-primary)', 
+            border: '1px solid var(--border)', 
+            borderRadius: '6px', 
+            marginTop: '4px', 
+            maxHeight: '220px', 
+            overflowY: 'auto',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+          }}>
+            {results.map((r, i) => (
+              <div 
+                key={r.id} 
+                onClick={() => selectResult(r)} 
+                style={{
+                  padding: '12px 16px', 
+                  cursor: 'pointer', 
+                  borderBottom: i === results.length - 1 ? 'none' : '1px solid var(--border)', 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <strong style={{fontSize: '0.95em', color: 'var(--text-primary)'}}>{r.name}</strong> 
+                <span style={{fontSize: '0.8em', color: 'var(--text-secondary)'}}>{r.desc}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      {lookupState && <div style={{fontSize: '0.85em', color: '#70d8c2', marginBottom: '8px'}}>{lookupState}</div>}
-      <div style={{display: 'flex', gap: '8px'}}>
-        <input name="FORECAST_LATITUDE" value={settings.FORECAST_LATITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Latitude"/>
-        <input name="FORECAST_LONGITUDE" value={settings.FORECAST_LONGITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Longitude"/>
+
+      {lookupState && <div style={{fontSize: '0.85em', color: '#70d8c2', marginBottom: '12px'}}>{lookupState}</div>}
+      
+      <div style={{display: 'flex', gap: '12px'}}>
+        <div style={{flex: 1}}>
+          <input name="FORECAST_LATITUDE" value={settings.FORECAST_LATITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Latitude"/>
+        </div>
+        <div style={{flex: 1}}>
+          <input name="FORECAST_LONGITUDE" value={settings.FORECAST_LONGITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Longitude"/>
+        </div>
       </div>
     </div>
     

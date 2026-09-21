@@ -35,7 +35,7 @@ async def headers(request,call_next):
     response.headers['X-Content-Type-Options']='nosniff'
     response.headers['Referrer-Policy']='no-referrer'
     response.headers['X-Frame-Options']='DENY'
-    response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org https://api.open-meteo.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com https://geocoding.geo.census.gov; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     if request.url.path.startswith('/api/') or request.url.path in ('/sw.js','/index.html','/'):
         response.headers['Cache-Control']='no-store'
     return response
@@ -53,6 +53,57 @@ def status():
         size=con.execute('PRAGMA page_count').fetchone()[0]*con.execute('PRAGMA page_size').fetchone()[0]
     return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
                 backup_scope='Local snapshots only; off-server backup is not configured',version=APP_VERSION)
+
+
+@app.get('/api/geocode')
+def geocode(q: str):
+    import httpx
+    import urllib.parse
+    results = []
+    
+    # Open-Meteo for cities
+    try:
+        r = httpx.get(f"https://geocoding-api.open-meteo.com/v1/search?name={urllib.parse.quote(q)}&count=3&language=en&format=json", timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            if 'results' in data:
+                for item in data['results']:
+                    results.append({
+                        'id': f"om_{item['id']}",
+                        'name': item['name'],
+                        'desc': f"{item.get('admin1', '')}, {item.get('country', '')}".strip(', '),
+                        'latitude': item['latitude'],
+                        'longitude': item['longitude'],
+                        'timezone': item.get('timezone')
+                    })
+    except Exception:
+        pass
+
+    # US Census for exact street addresses (only if there are numbers in the query)
+    import re
+    if re.search(r'\d', q):
+        try:
+            r = httpx.get('https://geocoding.geo.census.gov/geocoder/locations/onelineaddress', params={
+                'address': q,
+                'benchmark': '2020',
+                'format': 'json'
+            }, timeout=3)
+            if r.status_code == 200:
+                data = r.json()
+                if 'result' in data and 'addressMatches' in data['result']:
+                    for i, m in enumerate(data['result']['addressMatches']):
+                        results.append({
+                            'id': f"cen_{i}",
+                            'name': m['matchedAddress'],
+                            'desc': 'US Address',
+                            'latitude': m['coordinates']['y'],
+                            'longitude': m['coordinates']['x'],
+                            'timezone': None
+                        })
+        except Exception:
+            pass
+
+    return results
 
 @app.get('/api/settings')
 def get_settings():
