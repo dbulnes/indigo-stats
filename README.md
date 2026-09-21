@@ -19,7 +19,7 @@ A private air and weather observatory: React + TypeScript PWA, Python FastAPI, a
 - Optionally fetches hourly regional weather and air-quality forecasts from Open-Meteo; historical comparisons only use forecasts retrieved before their target hour.
 - Offers date ranges, zoom/time navigation, previous-period overlays, threshold inspection, daily patterns, CSV export, and collector/storage health.
 - Keeps minute history indefinitely by default. Raw sensor payloads expire after 30 days. Monitor actual disk usage.
-- Makes consistent daily SQLite backups, retaining the latest 14 snapshots on the same persistent volume. Off-server backups are a separate setup step.
+- Makes consistent daily SQLite snapshots, retaining 14 locally, and can reconcile verified copies to one S3, Google Drive, or host-mounted filesystem destination with 30-copy remote retention.
 
 ## Architecture and persistence
 
@@ -34,6 +34,8 @@ Browser / installed PWA → Tailscale HTTPS → FastAPI → SQLite on appdata
 Use one Uvicorn worker: the application owns the scheduled collection jobs. The entrypoint initializes permissions on the dedicated `/data` mount and drops privileges to PUID/PGID (Unraid defaults 99:100). The root filesystem is read-only. No Docker socket, host networking, SSH, host startup scripts, or automatic Tailscale configuration is required.
 
 The Unraid template publishes a trusted-LAN port. The optional Compose example binds to loopback for a host reverse proxy. There is no application login: restrict access to your trusted LAN/tailnet and never publish it directly to the internet.
+
+Off-server backup is optional and never places the live SQLite database on remote storage. The filesystem provider writes only beneath a distinct host-managed mount at `/offsite`; mount NFS, SMB/CIFS, or SSHFS on the host first and make it writable by the configured PUID/PGID. S3 credentials and Google OAuth client secrets are accepted only through environment or `_FILE` secrets. See [operations](docs/operations.md#off-server-backups) for setup and recovery.
 
 ## Local development
 
@@ -102,6 +104,6 @@ To bump the version without releasing, use `node scripts/bump-version.mjs <major
 npm run build --prefix web
 ```
 
-Tests cover AQI boundaries, channel correction, NowCast missing hours, duplicate ingestion, private-setting isolation, export pagination, forecast look-ahead prevention, backup integrity, and schema rollback protection.
+Tests cover AQI boundaries, channel correction, NowCast missing hours, duplicate ingestion, private-setting isolation, export pagination, forecast look-ahead prevention, local and remote backup integrity, remote reconciliation, and schema rollback protection.
 
 Sources: [PurpleAir local JSON](https://community.purpleair.com/t/sensor-json-documentation/6917), [EPA correction study](https://amt.copernicus.org/articles/14/4617/2021/), [AQI technical guidance](https://document.airnow.gov/technical-assistance-document-for-the-reporting-of-daily-air-quailty.pdf), [Open-Meteo](https://open-meteo.com/en/docs), [CAMS air forecasts](https://open-meteo.com/en/docs/air-quality-api).

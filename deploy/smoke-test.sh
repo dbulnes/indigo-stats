@@ -7,18 +7,24 @@ platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$image")
 echo "Testing $image ($platform)"
 name="indigo-smoke-$$"
 volume="$name-data"
+offsite_volume="$name-offsite"
 cleanup() {
     docker rm -f "$name" >/dev/null 2>&1 || true
     docker volume rm "$volume" >/dev/null 2>&1 || true
+    docker volume rm "$offsite_volume" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT INT TERM
 docker volume create "$volume" >/dev/null
+docker volume create "$offsite_volume" >/dev/null
+# Model a host-mounted share already prepared for the container user. The app itself
+# must never change ownership or mount remote storage.
+docker run --rm --platform "$platform" --entrypoint chown -v "$offsite_volume:/offsite" "$image" 99:100 /offsite
 start() {
     docker run -d --platform "$platform" --name "$name" --init \
         --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
         --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
         -e DISABLE_JOBS=1 -e PUID=99 -e PGID=100 \
-        -v "$volume:/data" "$image" >/dev/null
+        -v "$volume:/data" -v "$offsite_volume:/offsite" "$image" >/dev/null
     for attempt in $(seq 1 30); do
         if docker exec "$name" python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')" >/dev/null 2>&1; then return; fi
         sleep 1
@@ -34,6 +40,23 @@ docker rm "$name" >/dev/null
 start
 docker exec -u 99:100 "$name" python -c "from backend import db; assert db.settings()['smoke_marker']=='retained'; assert list((db.DATA/'backups').glob('*.sqlite'))"
 docker exec -u 99:100 "$name" python -m backend.manage check
+docker exec -i -u 99:100 "$name" python - <<'OFFSITE'
+from pathlib import Path
+from unittest.mock import patch
+from backend import backups, db
+
+backups.set_config({'provider': 'filesystem'})
+assert backups.run(wait=True)
+remote = Path('/offsite/indigo-stats')
+(remote / 'unrelated.txt').write_text('preserve')
+with patch('backend.db.time.strftime', return_value='20990101T000000Z'):
+    db.backup()
+backups.REMOTE_RETENTION = 1
+assert backups.run(wait=True)
+assert len(backups.remote_list()) == 1
+assert (remote / 'unrelated.txt').read_text() == 'preserve'
+OFFSITE
+docker exec -u 99:100 "$name" python -c "from pathlib import Path; files=list(Path('/offsite/indigo-stats').glob('*.sqlite')); manifests=list(Path('/offsite/indigo-stats').glob('*.manifest.json')); assert len(files)==len(manifests)==1"
 docker exec -i -u 99:100 "$name" python - <<'CHECK'
 import json
 import sqlite3
@@ -57,3 +80,11 @@ with sqlite3.connect(next((db.DATA / 'backups').glob('*.sqlite'))) as backup:
     assert backup.execute('SELECT temperature_raw FROM readings').fetchone()[0] == 81
 print('PASS: non-root startup, persisted readings/config, backup integrity, estimated temperature, and PWA assets')
 CHECK
+docker stop -t 35 "$name" >/dev/null
+docker rm "$name" >/dev/null
+# A configured filesystem destination must fail closed when /offsite is absent.
+docker run --rm --platform "$platform" --init --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
+    --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
+    -e PUID=99 -e PGID=100 -v "$volume:/data" "$image" \
+    python -c "from backend import db,backups; db.initialize(); p=backups.FilesystemProvider(); exec('try:\n p.probe(); raise SystemExit(1)\nexcept backups.BackupError:\n pass')"
+echo 'PASS: verified off-server copy persisted and missing /offsite fails closed'

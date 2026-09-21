@@ -8,6 +8,9 @@ services:
       - "127.0.0.1:8765:8000"
     volumes:
       - "${INDIGO_DATA_DIR:?Set a persistent local appdata directory}:/data"
+      # Optional host-mounted NFS/SMB/SSHFS/local filesystem for the filesystem provider.
+      # It must already be mounted and writable by PUID:PGID; never point /data at it.
+      # - "${INDIGO_OFFSITE_DIR}:/offsite"
     environment:
       DATA_DIR: /data
       PUID: "${PUID:-99}"

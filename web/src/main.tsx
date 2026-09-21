@@ -8,6 +8,7 @@ import {
   Thermometer, Waves, Wind, Sun, Cloud, Compass
 } from 'lucide-react'
 import { SystemSettings } from './SystemSettings'
+import { BackupSettings } from './BackupSettings'
 import { weatherCondition, uvLabel, toC, toKmh } from './weather'
 import './style.css'
 
@@ -1152,10 +1153,14 @@ function App() {
               </article>
               <article className="panel">
                 <h2><ShieldCheck size={19} /> Backups & access</h2>
-                <p className="body-copy">Daily consistent database snapshots are kept on the persistent volume. The latest 14 snapshots are retained.</p>
-                <div className="notice">{status?.backup_scope ?? 'Off-server backup is not configured.'}</div>
+                <p className="body-copy">Daily consistent local snapshots are retained independently of off-server transfer health.</p>
+                <div className="notice">{status?.backup_scope ?? 'Loading backup status…'}</div>
                 <p className="muted">Private access is managed by your tailnet. Address and coordinates are never included in the dashboard API.</p>
               </article>
+            </section>
+            <section className="panel">
+              <div className="panel-heading"><h2>Backup destination</h2><span className="pill">Verified SHA-256 copies</span></div>
+              <BackupSettings />
             </section>
             <section className="panel">
               <div className="panel-heading">
@@ -1173,7 +1178,9 @@ function App() {
                           : j.name === 'weather'
                           ? 'Weather & air forecasts'
                           : j.name === 'backup'
-                          ? 'Daily backup'
+                          ? 'Daily local backup'
+                          : j.name === 'offsite_backup'
+                          ? 'Off-server backup'
                           : 'Database maintenance'}
                       </strong>
                       <p>{j.error ?? 'Running normally'}</p>

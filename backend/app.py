@@ -6,22 +6,26 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from . import db,jobs,config
+from . import db,jobs,config,backups
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
 APP_VERSION = '0.5.2'
+SCHEDULES = (
+    ('sensor', jobs.collect, 60),
+    ('weather', jobs.weather, 3600),
+    ('maintenance', jobs.maintenance, 3600),
+    ('offsite_backup', jobs.offsite_backup, 3600),
+)
 @asynccontextmanager
 async def lifespan(app):
     db.initialize()
     config.import_environment()
     tasks=[]
     if os.getenv('DISABLE_JOBS')!='1':
-        tasks=[asyncio.create_task(jobs.loop('sensor',jobs.collect,60)),
-               asyncio.create_task(jobs.loop('weather',jobs.weather,3600)),
-               asyncio.create_task(jobs.loop('maintenance',jobs.maintenance,3600))]
+        tasks=[asyncio.create_task(jobs.loop(name,task,interval)) for name,task,interval in SCHEDULES]
     yield
     for task in tasks: task.cancel()
     await asyncio.gather(*tasks,return_exceptions=True)
@@ -51,8 +55,50 @@ def status():
         jobs_status=[dict(r) for r in con.execute('SELECT * FROM job_status ORDER BY name')]
         counts=con.execute('SELECT COUNT(*) n,MIN(ts) first,MAX(ts) last FROM readings').fetchone()
         size=con.execute('PRAGMA page_count').fetchone()[0]*con.execute('PRAGMA page_size').fetchone()[0]
+    backup = backups.public_status()
+    scope = ('Local snapshots plus verified ' + backup['provider'].replace('_', ' ') + ' copies'
+             if backup['enabled'] else 'Local snapshots only; off-server backup is disabled')
     return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
-                backup_scope='Local snapshots only; off-server backup is not configured',version=APP_VERSION)
+                backup_scope=scope,version=APP_VERSION)
+
+@app.get('/api/backups')
+def backup_status():
+    return backups.public_status()
+
+@app.put('/api/backups')
+def configure_backups(data: dict):
+    try: backups.set_config(data)
+    except ValueError as exc: raise HTTPException(400, str(exc)) from None
+    return backups.public_status()
+
+@app.post('/api/backups/test')
+def test_backup_destination():
+    try: backups.probe()
+    except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
+    except Exception: raise HTTPException(502, 'Destination probe failed') from None
+    return {'ok': True}
+
+@app.post('/api/backups/run', status_code=202)
+def run_backup_now():
+    if not backups.start_async(): raise HTTPException(409, 'An off-server backup is already running')
+    return {'accepted': True}
+
+@app.get('/api/backups/google/connect')
+def google_connect():
+    try: return RedirectResponse(backups.google_authorization_url(), status_code=302)
+    except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
+
+@app.get('/api/backups/google/callback')
+def google_callback(code: str = Query(min_length=1), state: str = Query(min_length=1)):
+    try: backups.google_callback(code, state)
+    except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
+    except Exception: raise HTTPException(502, 'Google authorization failed') from None
+    return HTMLResponse('<!doctype html><title>Indigo Stats</title><p>Google Drive linked. You may close this window.</p>')
+
+@app.post('/api/backups/google/unlink')
+def google_unlink():
+    backups.google_unlink()
+    return {'ok': True}
 
 
 @app.get('/api/settings')

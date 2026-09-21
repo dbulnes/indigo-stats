@@ -52,6 +52,17 @@ class DatabaseTests(unittest.TestCase):
         import sqlite3
         con=sqlite3.connect(path)
         self.assertEqual(con.execute('SELECT pm25 FROM readings').fetchone()[0],3); con.close()
+    def test_local_backup_retention_permissions_and_job_status_history(self):
+        folder=db.DATA/'backups'; folder.mkdir(exist_ok=True)
+        for day in range(1,16): (folder/f'202601{day:02d}T000000Z.sqlite').write_bytes(b'old')
+        with patch('backend.db.time.strftime',return_value='20260116T000000Z'):
+            newest=db.backup()
+        retained=sorted(folder.glob('*.sqlite'))
+        self.assertEqual(len(retained),14); self.assertNotIn(folder/'20260101T000000Z.sqlite',retained)
+        self.assertEqual(newest.stat().st_mode & 0o777,0o600)
+        db.status('example',success=True); db.status('example','temporary failure')
+        with db.connect() as con: row=con.execute("SELECT last_success,error FROM job_status WHERE name='example'").fetchone()
+        self.assertIsNotNone(row['last_success']); self.assertEqual(row['error'],'temporary failure')
     def test_export_pages_every_row_and_escapes_formulas(self):
         from fastapi.testclient import TestClient
         from backend.app import app
@@ -86,10 +97,11 @@ class DatabaseTests(unittest.TestCase):
             con.execute('ALTER TABLE forecasts DROP COLUMN sunrise')
             con.execute('ALTER TABLE forecasts DROP COLUMN sunset')
             con.execute('ALTER TABLE forecasts DROP COLUMN temp_min')
+            con.execute('DROP TABLE backup_transfers')
             con.execute('PRAGMA user_version=1')
         db.initialize()
         with db.connect() as con:
-            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],5)
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],6)
             self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
         backups=list((db.DATA/'backups').glob('*.sqlite'))
         self.assertEqual(len(backups),1)
@@ -121,9 +133,11 @@ class DatabaseTests(unittest.TestCase):
         from backend.app import app
         db.set_settings({'address':'PRIVATE ADDRESS','latitude':12.345,'longitude':67.89,'timezone':'America/Los_Angeles'})
         with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
-            for url in ['/api/status','/api/latest','/api/history?start=0&end=86400','/api/forecast','/api/settings']:
-                r=client.get(url); self.assertEqual(r.status_code,200)
-                self.assertNotIn('PRIVATE ADDRESS',r.text); self.assertNotIn('12.345',r.text)
+            with patch.dict('os.environ',{'BACKUP_S3_ACCESS_KEY_ID':'PRIVATE KEY','BACKUP_S3_SECRET_ACCESS_KEY':'PRIVATE SECRET','DISABLE_JOBS':'1'}):
+                for url in ['/api/status','/api/latest','/api/history?start=0&end=86400','/api/forecast','/api/settings','/api/backups']:
+                    r=client.get(url); self.assertEqual(r.status_code,200)
+                    self.assertNotIn('PRIVATE ADDRESS',r.text); self.assertNotIn('12.345',r.text)
+                    self.assertNotIn('PRIVATE KEY',r.text); self.assertNotIn('PRIVATE SECRET',r.text)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
     def test_units_and_daily_forecast_api(self):
@@ -154,5 +168,15 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(f_data['daily'][0]['weather_code'],2)
             self.assertEqual(f_data['points'][0]['weather_code'],2)
             self.assertEqual(f_data['points'][0]['wind_speed'],8.5)
+    def test_security_headers_and_empty_latest_state(self):
+        from fastapi.testclient import TestClient
+        from backend.app import app
+        with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
+            response=client.get('/api/latest'); self.assertEqual(response.status_code,200)
+            self.assertTrue(response.json()['stale']); self.assertIsNone(response.json()['reading'])
+            self.assertEqual(response.headers['cache-control'],'no-store')
+            self.assertEqual(response.headers['x-frame-options'],'DENY')
+            self.assertIn("default-src 'self'",response.headers['content-security-policy'])
+            self.assertEqual(client.get('/api/history?start=0&end=999999999999').status_code,400)
 
 if __name__=='__main__': unittest.main()

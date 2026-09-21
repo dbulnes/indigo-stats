@@ -3,7 +3,7 @@ import json
 import logging
 import time
 import httpx
-from . import db
+from . import db,backups
 from .air import normalize, number
 
 log=logging.getLogger('indigo')
@@ -115,6 +115,14 @@ def maintenance():
         db.backup()
         db.status('backup',success=True)
     db.status('maintenance',success=True)
+
+async def offsite_backup():
+    # A failed remote transfer never changes the result of the local snapshot job.
+    try:
+        await asyncio.to_thread(backups.run, wait=True)
+    except Exception as exc:
+        # The backup service has already stored its actionable, sanitized error.
+        log.warning('offsite_backup failed (%s)',type(exc).__name__)
 
 async def loop(name,task,interval):
     while True:

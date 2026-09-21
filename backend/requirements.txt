@@ -1,3 +1,6 @@
 fastapi==0.135.1
 uvicorn==0.41.0
 httpx==0.28.1
+boto3==1.40.35
+google-api-python-client==2.179.0
+google-auth-oauthlib==1.2.2
