@@ -3,7 +3,11 @@
 [![Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml/badge.svg)](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml)
 
 <p align="center">
-  <img src="docs/screenshot_history.png" alt="Indigo Stats Dashboard" width="800"/>
+  <img src="docs/screenshot_overview.png" alt="Indigo Stats Overview Dashboard" width="800"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshot_history.png" alt="Indigo Stats History & Telemetry" width="800"/>
 </p>
 
 A private air and weather observatory: React + TypeScript PWA, Python FastAPI, and SQLite, in one Unraid application container. An optional private HTTPS proxy provides PWA access over your tailnet. No Supabase, Google login, or public frontend hosting is required.
