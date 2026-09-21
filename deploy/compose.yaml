@@ -20,9 +20,6 @@ services:
       FORECAST_LATITUDE: "${FORECAST_LATITUDE:-}"
       FORECAST_LONGITUDE: "${FORECAST_LONGITUDE:-}"
     stop_grace_period: 35s
-    read_only: true
-    tmpfs:
-      - /tmp
     cap_drop:
       - ALL
     cap_add:

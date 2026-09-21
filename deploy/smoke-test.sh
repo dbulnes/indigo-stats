@@ -14,7 +14,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 docker volume create "$volume" >/dev/null
 start() {
-    docker run -d --platform "$platform" --name "$name" --read-only --tmpfs /tmp --init \
+    docker run -d --platform "$platform" --name "$name" --init \
         --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
         --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
         -e DISABLE_JOBS=1 -e PUID=99 -e PGID=100 \
