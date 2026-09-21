@@ -24,9 +24,9 @@ export function SystemSettings() {
     if (!address.trim()) { setResults([]); return; }
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`)
+        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?text=${encodeURIComponent(address)}&f=json`)
         const data = await res.json()
-        setResults(data || [])
+        setResults(data.suggestions || [])
       } catch (e) {
         setResults([])
       }
@@ -47,19 +47,31 @@ export function SystemSettings() {
   const selectResult = async (r: any) => {
     setAddress('')
     setResults([])
-    setLookupState('Selecting location...')
+    setLookupState('Fetching coordinates...')
     
-    let tz = r.timezone
-    if (!tz) {
+    try {
+      const coordRes = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?SingleLine=${encodeURIComponent(r.text)}&magicKey=${r.magicKey}&f=json`)
+      const coordData = await coordRes.json()
+      
+      if (!coordData.candidates || coordData.candidates.length === 0) {
+        throw new Error('Coordinates not found')
+      }
+      
+      const lat = coordData.candidates[0].location.y
+      const lon = coordData.candidates[0].location.x
+      
+      let tz = settings.TZ
       try {
-        const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${r.latitude}&longitude=${r.longitude}&current=temperature_2m&timezone=auto`)
+        const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
         const tzData = await tzRes.json()
         tz = tzData.timezone
       } catch(e) {}
+      
+      setSettings(s => ({...s, FORECAST_LATITUDE: String(lat), FORECAST_LONGITUDE: String(lon), TZ: tz || s.TZ}))
+      setLookupState(`Selected ${r.text}. Auto-selected timezone: ${tz || 'None'}`)
+    } catch (e: any) {
+      setLookupState(`Error: ${e.message}`)
     }
-    
-    setSettings(s => ({...s, FORECAST_LATITUDE: String(r.latitude), FORECAST_LONGITUDE: String(r.longitude), TZ: tz || s.TZ}))
-    setLookupState(`Selected ${r.name}. Auto-selected timezone: ${tz || 'None'}`)
   }
 
   const save = async (e:React.FormEvent) => {
@@ -126,7 +138,7 @@ export function SystemSettings() {
         <input 
           value={address} 
           onChange={e=>setAddress(e.target.value)} 
-          placeholder="Type a city or US street address..." 
+          placeholder="Type any full street address or city..." 
           style={{width: '100%', marginBottom: '12px'}}
         />
         {results.length > 0 && (
@@ -146,22 +158,20 @@ export function SystemSettings() {
           }}>
             {results.map((r, i) => (
               <div 
-                key={r.id} 
+                key={i} 
                 onClick={() => selectResult(r)} 
                 style={{
                   padding: '12px 16px', 
                   cursor: 'pointer', 
                   borderBottom: i === results.length - 1 ? 'none' : '1px solid var(--border)', 
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
+                  alignItems: 'center',
                   transition: 'background 0.15s ease'
                 }}
                 onMouseOver={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
                 onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <strong style={{fontSize: '0.95em', color: 'var(--text-primary)'}}>{r.name}</strong> 
-                <span style={{fontSize: '0.8em', color: 'var(--text-secondary)'}}>{r.desc}</span>
+                <span style={{fontSize: '0.95em', color: 'var(--text-primary)'}}>{r.text}</span>
               </div>
             ))}
           </div>
