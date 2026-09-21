@@ -78,10 +78,11 @@ class DatabaseTests(unittest.TestCase):
             con.execute('ALTER TABLE readings DROP COLUMN environment_mode')
             con.execute('ALTER TABLE forecasts DROP COLUMN uv_index')
             con.execute('ALTER TABLE forecasts DROP COLUMN precipitation_probability')
+            con.execute('ALTER TABLE forecasts DROP COLUMN aqi')
             con.execute('PRAGMA user_version=1')
         db.initialize()
         with db.connect() as con:
-            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],3)
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],4)
             self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
         backups=list((db.DATA/'backups').glob('*.sqlite'))
         self.assertEqual(len(backups),1)
@@ -104,7 +105,7 @@ class DatabaseTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): db.initialize()
     def test_forecasts_do_not_use_hindsight(self):
         from backend.app import forecast_rows
-        jobs.store_forecasts([(100,200,'air',None,None,5,None,None),(199,200,'air',None,None,6,None,None),(201,200,'air',None,None,50,None,None)])
+        jobs.store_forecasts([(100,200,'air',None,None,5,None,None,None),(199,200,'air',None,None,6,None,None,None),(201,200,'air',None,None,50,None,None,None)])
         with db.connect() as con:
             self.assertEqual(forecast_rows(con,200,201)[0]['pm25'],6)
             self.assertEqual(forecast_rows(con,200,201,False)[0]['pm25'],50)
