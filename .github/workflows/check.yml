@@ -44,6 +44,6 @@ jobs:
         run: npm ci && npm run build
         working-directory: web
       - name: Build native container image
-        run: docker build --platform linux/${{ matrix.arch }} -t davidbulnes/indigo-stats:ci-${{ matrix.arch }} .
+        run: docker build --platform linux/${{ matrix.arch }} -t indigo-stats-ci:${{ matrix.arch }} .
       - name: Test container startup and persistence
-        run: sh deploy/smoke-test.sh davidbulnes/indigo-stats:ci-${{ matrix.arch }}
+        run: sh deploy/smoke-test.sh indigo-stats-ci:${{ matrix.arch }}
