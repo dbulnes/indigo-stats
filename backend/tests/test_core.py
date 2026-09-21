@@ -76,10 +76,12 @@ class DatabaseTests(unittest.TestCase):
         with db.connect() as con:
             con.execute("INSERT INTO readings(ts,temperature_raw,humidity_raw,method,quality) VALUES(60,81,42,'cf1','')")
             con.execute('ALTER TABLE readings DROP COLUMN environment_mode')
+            con.execute('ALTER TABLE forecasts DROP COLUMN uv_index')
+            con.execute('ALTER TABLE forecasts DROP COLUMN precipitation_probability')
             con.execute('PRAGMA user_version=1')
         db.initialize()
         with db.connect() as con:
-            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],2)
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],3)
             self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
         backups=list((db.DATA/'backups').glob('*.sqlite'))
         self.assertEqual(len(backups),1)
@@ -102,7 +104,7 @@ class DatabaseTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): db.initialize()
     def test_forecasts_do_not_use_hindsight(self):
         from backend.app import forecast_rows
-        jobs.store_forecasts([(100,200,'air',None,None,5),(199,200,'air',None,None,6),(201,200,'air',None,None,50)])
+        jobs.store_forecasts([(100,200,'air',None,None,5,None,None),(199,200,'air',None,None,6,None,None),(201,200,'air',None,None,50,None,None)])
         with db.connect() as con:
             self.assertEqual(forecast_rows(con,200,201)[0]['pm25'],6)
             self.assertEqual(forecast_rows(con,200,201,False)[0]['pm25'],50)
@@ -111,10 +113,10 @@ class DatabaseTests(unittest.TestCase):
         from backend.app import app
         db.set_settings({'address':'PRIVATE ADDRESS','latitude':12.345,'longitude':67.89,'timezone':'America/Los_Angeles'})
         with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
-            for url in ['/api/status','/api/latest','/api/history?start=0&end=86400','/api/forecast']:
+            for url in ['/api/status','/api/latest','/api/history?start=0&end=86400','/api/forecast','/api/settings']:
                 r=client.get(url); self.assertEqual(r.status_code,200)
                 self.assertNotIn('PRIVATE ADDRESS',r.text); self.assertNotIn('12.345',r.text)
-            self.assertIn(client.post('/api/settings',json={}).status_code,(404,405))
+            self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
 
 if __name__=='__main__': unittest.main()

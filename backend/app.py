@@ -56,16 +56,23 @@ def status():
 
 @app.get('/api/settings')
 def get_settings():
-    from .config import ENV_FIELDS
     s = db.settings()
-    return {env: s.get(key) for env, (key, _) in ENV_FIELDS.items()}
+    return {
+        'FORECAST_ENABLED': s.get('forecast_enabled'),
+        'PM_METHOD': s.get('pm_method'),
+        'ENVIRONMENT_MODE': s.get('environment_mode'),
+        'SENSOR_PLACEMENT': s.get('placement'),
+        'TZ': s.get('timezone')
+    }
 
 @app.post('/api/settings')
 def post_settings(data: dict):
     from .config import validate, ENV_FIELDS
     update = {}
-    for env, (key, cast) in ENV_FIELDS.items():
+    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ']
+    for env in allowed:
         if env in data and data[env] is not None and str(data[env]).strip() != '':
+            key, cast = ENV_FIELDS[env]
             try:
                 update[key] = cast(str(data[env]))
             except ValueError:
