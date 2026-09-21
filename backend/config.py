@@ -15,6 +15,7 @@ ENV_FIELDS={
     'FORECAST_LONGITUDE':('longitude',float), 'LOCATION_ADDRESS':('address',str),
     'FORECAST_ENABLED':('forecast_enabled',boolean), 'TZ':('timezone',str), 'PM_METHOD':('pm_method',str),
     'SENSOR_PLACEMENT':('placement',str), 'ENVIRONMENT_MODE':('environment_mode',str),
+    'UNITS':('units',str),
 }
 
 def validate(values):
@@ -37,6 +38,8 @@ def validate(values):
         raise ValueError('Unknown environment conversion')
     if values.get('placement','outdoors') not in ('outdoors','indoors'):
         raise ValueError('Unknown sensor placement')
+    if values.get('units','imperial') not in ('imperial','metric'):
+        raise ValueError('Unknown unit system')
     if 'timezone' in values: ZoneInfo(values['timezone'])
     return values
 

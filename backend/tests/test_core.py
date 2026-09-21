@@ -79,10 +79,17 @@ class DatabaseTests(unittest.TestCase):
             con.execute('ALTER TABLE forecasts DROP COLUMN uv_index')
             con.execute('ALTER TABLE forecasts DROP COLUMN precipitation_probability')
             con.execute('ALTER TABLE forecasts DROP COLUMN aqi')
+            con.execute('ALTER TABLE forecasts DROP COLUMN weather_code')
+            con.execute('ALTER TABLE forecasts DROP COLUMN wind_speed')
+            con.execute('ALTER TABLE forecasts DROP COLUMN apparent_temperature')
+            con.execute('ALTER TABLE forecasts DROP COLUMN cloud_cover')
+            con.execute('ALTER TABLE forecasts DROP COLUMN sunrise')
+            con.execute('ALTER TABLE forecasts DROP COLUMN sunset')
+            con.execute('ALTER TABLE forecasts DROP COLUMN temp_min')
             con.execute('PRAGMA user_version=1')
         db.initialize()
         with db.connect() as con:
-            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],4)
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],5)
             self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
         backups=list((db.DATA/'backups').glob('*.sqlite'))
         self.assertEqual(len(backups),1)
@@ -119,5 +126,33 @@ class DatabaseTests(unittest.TestCase):
                 self.assertNotIn('PRIVATE ADDRESS',r.text); self.assertNotIn('12.345',r.text)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
+    def test_units_and_daily_forecast_api(self):
+        from fastapi.testclient import TestClient
+        from backend.app import app
+        with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
+            r=client.get('/api/settings')
+            self.assertEqual(r.json()['UNITS'],'imperial')
+            res=client.post('/api/settings',json={'UNITS':'metric'})
+            self.assertEqual(res.status_code,200)
+            self.assertEqual(client.get('/api/settings').json()['UNITS'],'metric')
+            bad=client.post('/api/settings',json={'UNITS':'kelvin'})
+            self.assertEqual(bad.status_code,400)
+            import time
+            now=int(time.time())//3600*3600
+            jobs.store_forecasts([
+                (now, now+3600, 'weather', 72.0, 50.0, None, 5.0, 20.0, None, 2, 8.5, 74.0, 40.0, None, None, None),
+                (now, now+3600, 'daily', 75.0, None, None, None, None, None, 2, None, None, None, now+20000, now+60000, 55.0)
+            ])
+            f_res=client.get('/api/forecast')
+            self.assertEqual(f_res.status_code,200)
+            f_data=f_res.json()
+            self.assertIn('points',f_data)
+            self.assertIn('daily',f_data)
+            self.assertEqual(len(f_data['daily']),1)
+            self.assertEqual(f_data['daily'][0]['temperature'],75.0)
+            self.assertEqual(f_data['daily'][0]['temp_min'],55.0)
+            self.assertEqual(f_data['daily'][0]['weather_code'],2)
+            self.assertEqual(f_data['points'][0]['weather_code'],2)
+            self.assertEqual(f_data['points'][0]['wind_speed'],8.5)
 
 if __name__=='__main__': unittest.main()

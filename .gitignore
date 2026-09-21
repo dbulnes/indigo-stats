@@ -17,3 +17,4 @@ supabase/.temp/
 
 *.tsbuildinfo
 ._*
+docs/design-proposals/

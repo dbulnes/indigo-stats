@@ -193,6 +193,7 @@ export function SystemSettings() {
     <div className="form-group"><label>PM Method</label><select name="PM_METHOD" value={settings.PM_METHOD||'cf1'} onChange={handleChange}><option value="cf1">Raw CF=1</option><option value="epa2021">EPA 2021</option></select></div>
     <div className="form-group"><label>Environment Mode</label><select name="ENVIRONMENT_MODE" value={settings.ENVIRONMENT_MODE||'purpleair'} onChange={handleChange}><option value="purpleair">PurpleAir estimated ambient</option><option value="raw">Raw operating readings</option><option value="simple">Simple correction</option></select></div>
     <div className="form-group"><label>Placement</label><select name="SENSOR_PLACEMENT" value={settings.SENSOR_PLACEMENT||'outdoors'} onChange={handleChange}><option value="outdoors">Outdoors</option><option value="indoors">Indoors</option></select></div>
+    <div className="form-group"><label>Units</label><select name="UNITS" value={settings.UNITS||'imperial'} onChange={handleChange}><option value="imperial">Imperial (°F, mph)</option><option value="metric">Metric (°C, km/h)</option></select></div>
     <div className="form-actions"><button type="submit" disabled={saving}>{saving?'Saving...':'Save Settings'}</button></div>
     {msg.text && <div className={`notice ${msg.type}`}>{msg.text}</div>}
   </form>

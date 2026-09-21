@@ -64,14 +64,15 @@ def get_settings():
         'ENVIRONMENT_MODE': s.get('environment_mode'),
         'SENSOR_PLACEMENT': s.get('placement'),
         'TZ': s.get('timezone'),
-        'HAS_FORECAST_LOCATION': 'latitude' in s and 'longitude' in s
+        'HAS_FORECAST_LOCATION': 'latitude' in s and 'longitude' in s,
+        'UNITS': s.get('units', 'imperial'),
     }
 
 @app.post('/api/settings')
 def post_settings(data: dict):
     from .config import validate, ENV_FIELDS
     update = {}
-    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST']
+    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS']
     for env in allowed:
         if env in data and data[env] is not None and str(data[env]).strip() != '':
             key, cast = ENV_FIELDS[env]
@@ -85,6 +86,10 @@ def post_settings(data: dict):
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.set_settings(update)
+    if (merged.get('forecast_enabled') and 'latitude' in merged and 'longitude' in merged) and (
+        'forecast_enabled' in update or 'latitude' in update or 'longitude' in update
+    ):
+        asyncio.create_task(jobs.weather())
     return {'ok': True}
 
 @app.get('/api/latest')
@@ -113,7 +118,7 @@ def bounds(start,end):
 
 def forecast_rows(con,start,end,historical=True):
     # Only forecasts known before the hour began count as historical predictions.
-    return [dict(r) for r in con.execute('''SELECT f.* FROM forecasts f WHERE valid>=? AND valid<?
+    return [dict(r) for r in con.execute('''SELECT f.* FROM forecasts f WHERE kind IN ('weather','air') AND valid>=? AND valid<?
         AND fetched=(SELECT MAX(x.fetched) FROM forecasts x WHERE x.kind=f.kind AND x.valid=f.valid
         AND (?=0 OR x.fetched<=x.valid)) ORDER BY valid''',(start,end,1 if historical else 0))]
 
@@ -142,9 +147,16 @@ def history(start:int=Query(ge=0),end:int=Query(ge=0),step:int=Query(default=60,
 @app.get('/api/forecast')
 def forecast():
     now=int(time.time())//3600*3600
-    with db.connect() as con: rows=forecast_rows(con,now,now+3*86400,False)
-    for row in rows: row['aqi']=aqi(row['pm25'])
-    return {'points':rows}
+    with db.connect() as con:
+        hourly=forecast_rows(con,now,now+3*86400,False)
+        daily=[dict(r) for r in con.execute(
+            '''SELECT * FROM forecasts WHERE kind='daily' AND valid >= ? AND valid < ?
+            AND fetched = (SELECT MAX(f.fetched) FROM forecasts f
+            WHERE f.kind='daily' AND f.valid=forecasts.valid)
+            ORDER BY valid''', (now-86400, now+11*86400))]
+    for row in hourly:
+        row['aqi']=aqi(row['pm25'])
+    return {'points':hourly, 'daily':daily}
 
 @app.get('/api/export')
 def export(start:int=Query(ge=0),end:int=Query(ge=0)):

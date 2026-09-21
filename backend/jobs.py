@@ -42,25 +42,58 @@ async def weather():
     if 'latitude' not in cfg or 'longitude' not in cfg:
         db.status('weather','Forecast location is not configured')
         return
-    common=dict(latitude=cfg['latitude'],longitude=cfg['longitude'],timezone='GMT',timeformat='unixtime',forecast_days=5)
+    common=dict(latitude=cfg['latitude'],longitude=cfg['longitude'],timezone='GMT',timeformat='unixtime')
     now=int(time.time())
     async with httpx.AsyncClient(timeout=30,trust_env=False) as client:
         for kind,url,params in [
-            ('weather','https://api.open-meteo.com/v1/forecast',dict(hourly='temperature_2m,relative_humidity_2m,uv_index,precipitation_probability',temperature_unit='fahrenheit')),
-            ('air','https://air-quality-api.open-meteo.com/v1/air-quality',dict(hourly='pm2_5,us_aqi'))]:
+            ('weather','https://api.open-meteo.com/v1/forecast',dict(
+                hourly='temperature_2m,relative_humidity_2m,uv_index,precipitation_probability,weather_code,wind_speed_10m,apparent_temperature,cloud_cover',
+                daily='sunrise,sunset,weather_code,temperature_2m_max,temperature_2m_min',
+                temperature_unit='fahrenheit',
+                wind_speed_unit='mph',
+                forecast_days=10)),
+            ('air','https://air-quality-api.open-meteo.com/v1/air-quality',dict(hourly='pm2_5,us_aqi',forecast_days=7))]:
             response=await client.get(url,params=common|params)
             response.raise_for_status()
-            h=response.json()['hourly']
+            data=response.json()
+            h=data['hourly']
             rows=[]
             for i,t in enumerate(h['time']):
                 val=lambda key,low=0,high=10000: number(h.get(key,[None]*len(h['time']))[i],low,high)
-                rows.append((now,t,kind,val('temperature_2m',-100,200),val('relative_humidity_2m',0,100),val('pm2_5'),val('uv_index',0,50),val('precipitation_probability',0,100),val('us_aqi',0,500)))
+                w_code = int(w) if (w := val('weather_code',0,99)) is not None else None
+                rows.append((now,t,kind,
+                    val('temperature_2m',-100,200),
+                    val('relative_humidity_2m',0,100),
+                    val('pm2_5'),
+                    val('uv_index',0,50),
+                    val('precipitation_probability',0,100),
+                    val('us_aqi',0,500),
+                    w_code if kind=='weather' else None,
+                    val('wind_speed_10m',0,300) if kind=='weather' else None,
+                    val('apparent_temperature',-100,200) if kind=='weather' else None,
+                    val('cloud_cover',0,100) if kind=='weather' else None,
+                    None, None, None))
+            if kind=='weather' and 'daily' in data:
+                d=data['daily']
+                for i,t in enumerate(d['time']):
+                    dval=lambda key,low=0,high=10000: number(d.get(key,[None]*len(d['time']))[i],low,high)
+                    dw_code = int(w) if (w := dval('weather_code',0,99)) is not None else None
+                    sunrise = int(s) if (s := dval('sunrise',0,2500000000)) is not None else None
+                    sunset = int(s) if (s := dval('sunset',0,2500000000)) is not None else None
+                    rows.append((now,t,'daily',
+                        dval('temperature_2m_max',-100,200),
+                        None, None, None, None, None,
+                        dw_code,
+                        None, None, None,
+                        sunrise, sunset,
+                        dval('temperature_2m_min',-100,200)))
             await asyncio.to_thread(store_forecasts,rows)
     await asyncio.to_thread(db.status,'weather',success=True)
 
 def store_forecasts(rows):
+    padded = [r + (None,)*(16-len(r)) if len(r) < 16 else r for r in rows]
     with db.connect() as con:
-        con.executemany('INSERT OR REPLACE INTO forecasts VALUES (?,?,?,?,?,?,?,?,?)',rows)
+        con.executemany('INSERT OR REPLACE INTO forecasts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',padded)
 
 def maintenance():
     now=int(time.time())
