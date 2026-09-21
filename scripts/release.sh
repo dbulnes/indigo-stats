@@ -88,7 +88,7 @@ if command -v gh >/dev/null 2>&1; then
 
   # Poll until the CI run for our commit appears (GitHub may need a few seconds)
   RUN_ID=""
-  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  for attempt in $(seq 1 30); do
     RUN_ID="$(gh run list --branch main --workflow check.yml --limit 5 \
       --json databaseId,headSha \
       --jq ".[] | select(.headSha == \"$COMMIT_SHA\") | .databaseId" 2>/dev/null | head -1 || echo "")"
@@ -96,8 +96,8 @@ if command -v gh >/dev/null 2>&1; then
       break
     fi
     RUN_ID=""
-    if [ "$attempt" -lt 10 ]; then
-      printf "  Waiting for CI run to appear (attempt %s/10)…\n" "$attempt"
+    if [ "$attempt" -lt 30 ]; then
+      printf "  Waiting for CI run to appear (attempt %s/30)…\n" "$attempt"
       sleep 10
     fi
   done
@@ -109,7 +109,7 @@ if command -v gh >/dev/null 2>&1; then
       die "CI failed — fix the issue before tagging"
     fi
   else
-    die "Could not locate CI run for ${SHORT_SHA} after 100s — verify at https://github.com/dbulnes/indigo-stats/actions"
+    die "Could not locate CI run for ${SHORT_SHA} after 5 minutes — verify at https://github.com/dbulnes/indigo-stats/actions"
   fi
 else
   warn "GitHub CLI (gh) not installed — skipping CI wait"
