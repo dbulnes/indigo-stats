@@ -9,3 +9,13 @@
 .forecast-delta{font-size:9px;color:#899cb5;margin-top:9px}.forecast-delta span{color:#b4c3d6}.chart-navigation{display:flex;gap:6px;align-items:center;margin-top:20px;color:#96a6bc;font-size:10px;flex-wrap:wrap}.chart-navigation span{padding:0 5px}.chart-navigation button{border:1px solid #354358;background:#1c2a3c;color:#aabbd0;border-radius:5px;padding:5px 8px;display:flex;align-items:center;font-size:10px}
 
 .environment-choice{margin-bottom:18px;font-size:11px;color:#9cacbf}.environment-choice select{margin:8px 12px;padding:8px;background:#172130;color:#d6dfeb;border:1px solid #3a4960;border-radius:6px;font:inherit}
+
+.settings-form{display:flex;flex-direction:column;gap:15px;margin-top:15px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group label{font-size:11px;color:#a4b0c1;font-weight:500;}
+.form-group input,.form-group select{background:#101a27;border:1px solid #3b4a60;border-radius:5px;color:#d2dbea;padding:9px 12px;font-size:12px;outline:none;}
+.form-group input:focus,.form-group select:focus{border-color:#70d8c2;}
+.form-actions{margin-top:10px;}
+.form-actions button{background:#70d8c2;color:#101a27;border:none;border-radius:6px;padding:9px 16px;font-size:12px;font-weight:600;}
+.notice.success{background:#1f332c;border-color:#3d5e53;color:#96d8c3;}
+.notice.error{background:#332025;border-color:#5e3d46;color:#d8969f;}
