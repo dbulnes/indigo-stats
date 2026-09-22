@@ -138,3 +138,10 @@ printf "  Commit:   ${SHORT_SHA}\n"
 printf "  Tag:      ${TAG}\n"
 printf "  Actions:  https://github.com/dbulnes/indigo-stats/actions\n"
 printf "  Package:  https://github.com/dbulnes/indigo-stats/pkgs/container/indigo-stats\n"
+
+# ── Unraid Deployment ───────────────────────────────────────────────────
+if [ "${DEPLOY_UNRAID:-1}" = "1" ] && [ -f "$REPO_ROOT/scripts/deploy-unraid.sh" ]; then
+  printf "\n"
+  info "Deploying ${TAG} to Unraid via sshhomelab…"
+  "$REPO_ROOT/scripts/deploy-unraid.sh" "IndigoStats" "${TAG}"
+fi
