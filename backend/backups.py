@@ -60,7 +60,7 @@ def _secret(name: str) -> str | None:
     if not filename:
         return None
     try:
-        return Path(filename).read_text().strip()
+        return Path(filename).read_text(encoding='utf-8').strip()
     except OSError as exc:
         raise BackupError(f'{name} secret file is unavailable') from exc
 
@@ -355,7 +355,7 @@ class DriveProvider(Provider):
 
     def _find(self, name: str, kind: str) -> list[dict[str, Any]]:
         if not self.folder: return []
-        safe = name.replace("'", "\\'")
+        safe = name.replace('\\', '\\\\').replace("'", "\\'")
         query = f"'{self.folder}' in parents and trashed=false and name='{safe}'"
         found = self.service.files().list(q=query, spaces='drive', fields='files(id,name,appProperties)', pageSize=10).execute().get('files', [])
         return [item for item in found if item.get('appProperties', {}).get('indigoStatsType') == kind]
@@ -551,8 +551,11 @@ def google_authorization_url() -> str:
     if not all((client_id, client_secret, callback)): raise BackupError('Google OAuth secrets are not configured')
     if not (callback.startswith('https://') or callback.startswith('http://localhost')):
         raise BackupError('Google OAuth callback must use HTTPS')
+    now = time.time()
+    for expired in [k for k, v in _oauth_states.items() if v[1] < now]:
+        _oauth_states.pop(expired, None)
     verifier = base64.urlsafe_b64encode(secrets.token_bytes(48)).rstrip(b'=').decode()
-    state = secrets.token_urlsafe(32); _oauth_states[state] = (verifier, time.time() + 600)
+    state = secrets.token_urlsafe(32); _oauth_states[state] = (verifier, now + 600)
     flow = Flow.from_client_config({'web': {'client_id': client_id, 'client_secret': client_secret,
         'auth_uri': 'https://accounts.google.com/o/oauth2/auth', 'token_uri': 'https://oauth2.googleapis.com/token',
         'redirect_uris': [callback]}}, scopes=[SCOPE], redirect_uri=callback)

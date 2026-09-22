@@ -35,10 +35,10 @@ export function BackupSettings() {
   const action=async(name:string,path:string,init?:RequestInit)=>{
     setBusy(name); setMessage({text:'',type:''})
     try { const r=await fetch(path,init); const data=await r.json().catch(()=>({})); if(!r.ok) throw new Error(data.detail||'Request failed'); await load(); setMessage({text:name==='run'?'Backup started. Status will update in the background.':'Backup destination updated.',type:'success'}) }
-    catch(e:any){setMessage({text:e.message,type:'error'})} finally{setBusy('')}
+    catch(e:unknown){setMessage({text:e instanceof Error ? e.message : 'Request failed',type:'error'})} finally{setBusy('')}
   }
   const save=()=>{
-    const body:any={provider}
+    const body:Record<string, unknown>={provider}
     if(provider==='s3') Object.assign(body,s3)
     action('save','/api/backups',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
   }
@@ -65,7 +65,7 @@ export function BackupSettings() {
     </div>}
     {provider==='google_drive' && <div>
       <p className="muted">OAuth setup: {status.oauth_configured?'configured':'not configured'} · account: {status.google_linked?'linked':'not linked'}.</p>
-      {status.google_linked ? <button className="secondary" onClick={()=>action('unlink','/api/backups/google/unlink',{method:'POST'})}>Unlink Google Drive</button> : <a className="secondary" href="/api/backups/google/connect" target="_blank" rel="noreferrer">Link Google Drive</a>}
+      {status.google_linked ? <button className="secondary" onClick={()=>action('unlink','/api/backups/google/unlink',{method:'POST'})}>Unlink Google Drive</button> : <a className="secondary" href="/api/backups/google/connect" target="_blank" rel="noopener noreferrer">Link Google Drive</a>}
     </div>}
     <div className="backup-actions"><button onClick={save} disabled={!!busy}>{busy==='save'?'Saving…':'Save destination'}</button><button className="secondary" onClick={()=>action('test','/api/backups/test',{method:'POST'})} disabled={!!busy||provider==='disabled'}>Test connection</button><button className="secondary" onClick={()=>action('run','/api/backups/run',{method:'POST'})} disabled={!!busy||provider==='disabled'}>Back up now</button></div>
     {message.text && <div className={`notice ${message.type}`}>{message.text}</div>}

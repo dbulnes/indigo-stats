@@ -14,7 +14,7 @@ def main(argv=None, input_stream=None):
     db.initialize()
     if args.action=='configure':
         cfg=json.load(source)
-        allowed={'address','latitude','longitude','sensor_host','timezone','pm_method','placement','environment_mode','forecast_enabled'}
+        allowed={'address','latitude','longitude','sensor_host','timezone','pm_method','placement','environment_mode','forecast_enabled','units'}
         if set(cfg)-allowed: raise SystemExit('Unknown configuration key')
         try: validated=validate(db.settings()|cfg)
         except (ValueError, TypeError, KeyError): raise SystemExit('Invalid private configuration') from None

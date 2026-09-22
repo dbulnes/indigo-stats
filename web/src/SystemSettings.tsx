@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 
+type Suggestion = { text: string; magicKey: string }
+
 export function SystemSettings() {
   const [settings, setSettings] = useState<Record<string,string>>({})
   const [loading, setLoading] = useState(true)
@@ -7,7 +9,7 @@ export function SystemSettings() {
   const [msg, setMsg] = useState({text:'', type:''})
   const [address, setAddress] = useState('')
   const [lookupState, setLookupState] = useState('')
-  const [results, setResults] = useState<any[]>([])
+  const [results, setResults] = useState<Suggestion[]>([])
   const dropdownRef = useRef<HTMLDivElement>(null)
   
   const timezones = typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : ['America/Los_Angeles', 'America/New_York', 'UTC'];
@@ -22,16 +24,20 @@ export function SystemSettings() {
   
   useEffect(() => {
     if (!address.trim()) { setResults([]); return; }
+    const ctrl = new AbortController()
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?text=${encodeURIComponent(address)}&f=json`)
+        const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest?text=${encodeURIComponent(address)}&f=json`, { signal: ctrl.signal })
         const data = await res.json()
         setResults(data.suggestions || [])
-      } catch (e) {
-        setResults([])
+      } catch (e: unknown) {
+        if ((e as Error)?.name !== 'AbortError') setResults([])
       }
     }, 300)
-    return () => clearTimeout(t)
+    return () => {
+      clearTimeout(t)
+      ctrl.abort()
+    }
   }, [address])
 
   useEffect(() => {
@@ -44,7 +50,7 @@ export function SystemSettings() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const selectResult = async (r: any) => {
+  const selectResult = async (r: Suggestion) => {
     setAddress('')
     setResults([])
     setLookupState('Fetching coordinates...')
@@ -65,12 +71,14 @@ export function SystemSettings() {
         const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
         const tzData = await tzRes.json()
         tz = tzData.timezone
-      } catch(e) {}
+      } catch {
+        // Fallback to configured timezone
+      }
       
       setSettings(s => ({...s, FORECAST_LATITUDE: String(lat), FORECAST_LONGITUDE: String(lon), TZ: tz || s.TZ}))
       setLookupState(`Selected ${r.text}. Auto-selected timezone: ${tz || 'None'}`)
-    } catch (e: any) {
-      setLookupState(`Error: ${e.message}`)
+    } catch (e: unknown) {
+      setLookupState(`Error: ${e instanceof Error ? e.message : 'Lookup failed'}`)
     }
   }
 
@@ -85,8 +93,8 @@ export function SystemSettings() {
       })
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to save')
       setMsg({text:'Settings saved successfully. Changes may take a minute to apply.', type:'success'})
-    } catch (e:any) {
-      setMsg({text: e.message, type:'error'})
+    } catch (e: unknown) {
+      setMsg({text: e instanceof Error ? e.message : 'Failed to save', type:'error'})
     }
     setSaving(false)
   }
@@ -100,13 +108,13 @@ export function SystemSettings() {
         setSettings(s => ({...s, TZ: tzData.timezone}))
         setLookupState(`Auto-selected timezone: ${tzData.timezone}`)
       }
-    } catch (e) {
+    } catch {
       // Ignore background errors
     }
   }
 
-  const handleChange = (e:any) => setSettings({...settings, [e.target.name]: e.target.value})
-  const handleBlur = (e:any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setSettings(s => ({...s, [e.target.name]: e.target.value}))
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.target.name === 'FORECAST_LATITUDE' || e.target.name === 'FORECAST_LONGITUDE') {
       const lat = e.target.name === 'FORECAST_LATITUDE' ? e.target.value : settings.FORECAST_LATITUDE;
       const lon = e.target.name === 'FORECAST_LONGITUDE' ? e.target.value : settings.FORECAST_LONGITUDE;

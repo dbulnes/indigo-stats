@@ -18,7 +18,7 @@ async def collect():
     cfg=await asyncio.to_thread(db.settings)
     host=cfg.get('sensor_host')
     if not host:
-        db.status('sensor','Sensor is not configured')
+        await asyncio.to_thread(db.status,'sensor','Sensor is not configured')
         return
     # Plain HTTP stays on the local network. Never log host, response, or request URL.
     async with httpx.AsyncClient(timeout=httpx.Timeout(12,connect=4),trust_env=False,
@@ -37,10 +37,10 @@ async def collect():
 async def weather():
     cfg=await asyncio.to_thread(db.settings)
     if not cfg.get('forecast_enabled',False):
-        db.status('weather','Forecasts are disabled in container settings')
+        await asyncio.to_thread(db.status,'weather','Forecasts are disabled in container settings')
         return
     if 'latitude' not in cfg or 'longitude' not in cfg:
-        db.status('weather','Forecast location is not configured')
+        await asyncio.to_thread(db.status,'weather','Forecast location is not configured')
         return
     common=dict(latitude=cfg['latitude'],longitude=cfg['longitude'],timezone='GMT',timeformat='unixtime')
     now=int(time.time())

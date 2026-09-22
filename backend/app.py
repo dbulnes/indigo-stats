@@ -116,19 +116,18 @@ def get_settings():
 
 @app.post('/api/settings')
 def post_settings(data: dict):
-    from .config import validate, ENV_FIELDS
     update = {}
     allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS']
     for env in allowed:
         if env in data and data[env] is not None and str(data[env]).strip() != '':
-            key, cast = ENV_FIELDS[env]
+            key, cast = config.ENV_FIELDS[env]
             try:
                 update[key] = cast(str(data[env]))
             except ValueError:
                 raise HTTPException(400, f'Invalid value for {env}')
     merged = db.settings() | update
     try:
-        validate(merged)
+        config.validate(merged)
     except ValueError as e:
         raise HTTPException(400, str(e))
     db.set_settings(update)
@@ -219,7 +218,7 @@ def export(start:int=Query(ge=0),end:int=Query(ge=0)):
             out=io.StringIO(); writer=csv.writer(out)
             for row in rows:
                 # Prevent spreadsheet formula interpretation of untrusted sensor text.
-                writer.writerow([("'"+v if isinstance(v,str) and v.startswith(('=','+','-','@')) else v) for v in row])
+                writer.writerow([("'"+v if isinstance(v,str) and v.startswith(('=','+','-','@','\t','\r')) else v) for v in row])
             yield out.getvalue(); cursor=rows[-1]['ts']
     return StreamingResponse(chunks(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="indigo-readings.csv"'})
 

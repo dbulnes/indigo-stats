@@ -6,9 +6,10 @@ from zoneinfo import ZoneInfo
 from . import db
 
 def boolean(value):
-    if value.lower() not in ('true', 'false'):
+    val = str(value).strip().lower()
+    if val not in ('true', 'false'):
         raise ValueError('Expected true or false')
-    return value.lower() == 'true'
+    return val == 'true'
 
 ENV_FIELDS={
     'SENSOR_HOST':('sensor_host',str), 'FORECAST_LATITUDE':('latitude',float),
@@ -19,9 +20,9 @@ ENV_FIELDS={
 }
 
 def validate(values):
-    if 'forecast_enabled' in values and type(values['forecast_enabled']) is not bool:
+    if 'forecast_enabled' in values and not isinstance(values['forecast_enabled'], bool):
         raise ValueError('Forecast enabled must be a boolean')
-    if ('latitude' in values)!=('longitude' in values):
+    if ('latitude' in values) != ('longitude' in values):
         raise ValueError('Set both forecast coordinates or neither')
     if 'sensor_host' in values:
         ip=ipaddress.ip_address(values['sensor_host'])
@@ -46,13 +47,14 @@ def validate(values):
 def import_environment():
     supplied={}
     for env,(key,cast) in ENV_FIELDS.items():
-        if os.environ.get(env,'').strip():
+        val = os.environ.get(env, '').strip()
+        if val:
             try:
-                supplied[key]=cast(os.environ[env])
+                supplied[key] = cast(val)
             except (ValueError, TypeError):
                 raise ValueError(f'Invalid configuration for {env}') from None
     merged=db.settings()|supplied
-    if ('latitude' in merged)!=('longitude' in merged):
+    if ('latitude' in merged) != ('longitude' in merged):
         raise ValueError('Set both forecast coordinates or neither')
     try:
         validate(merged)

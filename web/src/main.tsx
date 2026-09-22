@@ -5,7 +5,7 @@ import {
   Activity, ArrowDownToLine, ArrowUpRight, ChevronLeft, ZoomIn, ZoomOut,
   CalendarDays, Check, ChevronRight, CircleHelp, Clock3, Database, Droplets,
   Gauge, History, LayoutDashboard, RefreshCw, Settings2, ShieldCheck,
-  Thermometer, Waves, Wind, Sun, Cloud, Compass
+  Thermometer, Waves, Wind, Sun, Cloud
 } from 'lucide-react'
 import { SystemSettings } from './SystemSettings'
 import { BackupSettings } from './BackupSettings'
@@ -50,7 +50,7 @@ const fmt = (v: number | null | undefined, digits = 1) =>
   v == null ? '—' : v.toLocaleString(undefined, { maximumFractionDigits: digits })
 
 function aq(pm: number | null) {
-  if (pm == null) return null
+  if (pm == null || pm < 0 || !Number.isFinite(pm)) return null
   const c = Math.floor(pm * 10) / 10
   const bands = [
     [0, 9, 0, 50],
@@ -155,7 +155,6 @@ function App() {
   const [comparison, setComparison] = useState(false)
   const [showForecast, setShowForecast] = useState(true)
   const [threshold, setThreshold] = useState('')
-  const [details, setDetails] = useState(false)
   const [offline, setOffline] = useState(!navigator.onLine)
   const [environmentMode, setEnvironmentMode] = useState('')
   const [anchor, setAnchor] = useState(Math.ceil(Date.now() / 60000) * 60)
@@ -1148,7 +1147,7 @@ function App() {
                   <dt>Last reading</dt>
                   <dd>{relative(status?.readings.last)}</dd>
                   <dt>Application</dt>
-                  <dd>v{status?.version ?? '0.4.2'}</dd>
+                  <dd>v{status?.version ?? '0.5.2'}</dd>
                 </dl>
               </article>
               <article className="panel">

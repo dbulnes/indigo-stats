@@ -46,7 +46,7 @@ def initialize():
         version = con.execute('PRAGMA user_version').fetchone()[0]
     
     migrations_dir = Path(__file__).parent / 'migrations'
-    migrations = sorted([f for f in migrations_dir.glob('*.sql')])
+    migrations = sorted(migrations_dir.glob('*.sql'))
     target_version = len(migrations)
     
     if version > target_version:
@@ -58,7 +58,7 @@ def initialize():
         con.execute('PRAGMA journal_mode=WAL')
         for i in range(version, target_version):
             script_path = migrations[i]
-            with open(script_path, 'r') as f:
+            with open(script_path, 'r', encoding='utf-8') as f:
                 con.executescript(f.read())
             con.execute(f'PRAGMA user_version={i + 1}')
             

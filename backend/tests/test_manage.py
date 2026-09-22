@@ -19,8 +19,9 @@ class ManageTests(unittest.TestCase):
         return output.getvalue()
 
     def test_backup_check_and_private_configure(self):
-        message=self.run_cli(['configure'],'{"timezone":"UTC"}')
+        message=self.run_cli(['configure'],'{"timezone":"UTC","units":"metric"}')
         self.assertIn('Values omitted',message); self.assertNotIn('UTC',message)
+        self.assertEqual(db.settings()['units'],'metric')
         self.assertIn('created',self.run_cli(['backup']))
         self.assertIn('integrity: ok',self.run_cli(['check']))
         with self.assertRaises(SystemExit) as error: self.run_cli(['configure'],'{"credential":"PRIVATE"}')
