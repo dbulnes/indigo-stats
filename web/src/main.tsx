@@ -276,7 +276,8 @@ function App() {
 
   const reading = latest?.reading
   const meta = metrics[metric]
-  const currentAqi = latest?.nowcast_aqi ?? reading?.aqi
+  const liveAqi = reading?.aqi ?? (reading?.pm25 != null ? aq(reading.pm25) : null)
+  const currentAqi = liveAqi ?? latest?.nowcast_aqi
 
   function getMetric(obj: any, m: Metric) {
     if (!obj) return null
@@ -562,26 +563,32 @@ function App() {
                     <span className="eyebrow">AIR QUALITY</span>
                     <h2>Local Sensor</h2>
                   </div>
-                  <span className={`aqi-pill ${aqiClass(currentAqi)}`}>{category(currentAqi)}</span>
+                  <span className={`aqi-pill ${aqiClass(liveAqi ?? currentAqi)}`}>{category(liveAqi ?? currentAqi)}</span>
+                </div>
+                <div className="hero-condition">
+                  <Wind size={20} />
+                  <span>Fine Particulate Matter (PM2.5)</span>
                 </div>
 
                 <div className="hero-primary">
-                  <div className="hero-temp" style={{ color: '#70d8c2' }}>
-                    {fmt(currentAqi, 0)}
-                    <small style={{ color: '#92a2b7' }}>US AQI</small>
+                  <div className="hero-temp" style={{ color: aqiDotColor(liveAqi ?? currentAqi) }}>
+                    {fmt(reading?.pm25)}
+                    <small style={{ color: '#92a2b7' }}>µg/m³</small>
                   </div>
                 </div>
                 <div className="hero-feels">
-                  PM2.5: <strong style={{ color: '#e8edf5' }}>{fmt(reading?.pm25)} µg/m³</strong> ·{' '}
-                  {reading?.method === 'epa2021' ? 'EPA 2021 correction' : 'Raw CF=1'} ·{' '}
-                  {latest?.nowcast_aqi != null ? 'NowCast' : 'interval estimate'}
+                  US AQI: <strong style={{ color: '#e8edf5' }}>{fmt(liveAqi, 0)}</strong> (Live)
+                  {latest?.nowcast_aqi != null && (
+                    <> · <strong>{fmt(latest.nowcast_aqi, 0)}</strong> (NowCast 12h)</>
+                  )}
+                  {' '}· {reading?.method === 'epa2021' ? 'EPA 2021 correction' : 'Raw CF=1'}
                 </div>
 
                 {/* AQI Continuous Scale Bar */}
                 <div className="aqi-scale-bar">
                   <div
                     className="aqi-scale-marker"
-                    style={{ left: `${Math.min(100, Math.max(0, ((currentAqi ?? 0) / 300) * 100))}%` }}
+                    style={{ left: `${Math.min(100, Math.max(0, (((liveAqi ?? currentAqi) ?? 0) / 300) * 100))}%` }}
                   />
                 </div>
                 <div className="aqi-scale-labels">
