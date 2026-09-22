@@ -286,6 +286,16 @@ function App() {
   const meta = metrics[metric]
   const liveAqi = reading?.aqi ?? (reading?.pm25 != null ? aq(reading.pm25) : null)
   const currentAqi = liveAqi ?? latest?.nowcast_aqi
+  const connectionTone = offline || error || latest?.stale ? 'warning' : !latest ? 'loading' : 'healthy'
+  const connectionLabel = offline
+    ? 'Offline'
+    : error
+    ? 'Connection lost'
+    : !latest
+    ? 'Loading'
+    : latest.stale
+    ? 'Awaiting sensor'
+    : 'Collecting every minute'
 
   function getMetric(obj: any, m: Metric) {
     if (!obj) return null
@@ -506,11 +516,11 @@ function App() {
             <button className="unit-toggle" onClick={toggleUnits} title="Toggle between Imperial and Metric units">
               {units === 'imperial' ? '°F · mph' : '°C · km/h'}
             </button>
-            <span className={'live ' + (latest?.stale || error || offline ? 'warning' : '')}>
+            <span className={`live ${connectionTone}`} role="status" aria-live="polite">
               <i />
-              {offline ? 'Offline' : error ? 'Connection lost' : !latest ? 'Loading' : latest.stale ? 'Awaiting sensor' : 'Collecting every minute'}
+              {connectionLabel}
             </span>
-            <button className="icon-button" onClick={() => setTick(t => t + 1)} aria-label="Refresh readings">
+            <button className="icon-button" onClick={() => setTick(t => t + 1)} aria-label="Refresh readings" aria-busy={loading}>
               <RefreshCw size={16} className={loading ? 'spinning' : ''} />
             </button>
           </div>
@@ -532,10 +542,10 @@ function App() {
         </section>
 
         {(error || offline) && (
-          <div className="notice">{offline ? 'You’re offline. Reconnect to your tailnet for fresh readings.' : error}</div>
+          <div className="notice" role="alert">{offline ? 'You’re offline. Reconnect to your tailnet for fresh readings.' : error}</div>
         )}
         {latest?.stale && !error && (
-          <div className="notice">
+          <div className="notice" role="status">
             {reading ? `Sensor readings are stale. Last received ${time(reading.ts, true)}.` : 'Waiting for the first sensor reading. The collector will retry automatically.'}
           </div>
         )}
@@ -1095,11 +1105,17 @@ function App() {
                     </ComposedChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="empty-chart">
-                    <Waves size={42} />
-                    <h3>{loading ? 'Loading...' : 'No data available.'}</h3>
-                    <p>Readings will appear as your sensor reports. Choose another date range to explore earlier data.</p>
-                  </div>
+                  loading ? (
+                    <div className="chart-skeleton" role="status" aria-label="Loading chart data">
+                      <span /><span /><span /><span /><span />
+                    </div>
+                  ) : (
+                    <div className="empty-chart">
+                      <Waves size={42} />
+                      <h3>No data available.</h3>
+                      <p>Readings will appear as your sensor reports. Choose another date range to explore earlier data.</p>
+                    </div>
+                  )
                 )}
               </div>
 

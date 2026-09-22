@@ -52,6 +52,14 @@ DATA_DIR="$PWD/data" .venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 8
 
 For frontend hot reload, run `npm run dev --prefix web`; Vite proxies `/api` to port 8765. Set `DISABLE_JOBS=1` for UI-only work. An empty database displays a clear waiting state; production does not fabricate historical readings.
 
+To rebuild and refresh the persistent local review container in one command on Apple Silicon:
+
+```sh
+sh scripts/refresh-local.sh
+```
+
+The script always builds the ARM64 image and runs the full disposable smoke test before replacing `indigo-stats-local`. It retains the `indigo-stats-local-data` volume, publishes only `127.0.0.1:8765`, applies the production container hardening, and waits for the health endpoint. It refuses to replace an existing container if its `/data` mount differs. Override the local names or port with `INDIGO_LOCAL_IMAGE`, `INDIGO_LOCAL_CONTAINER`, `INDIGO_LOCAL_DATA_VOLUME`, `INDIGO_LOCAL_PORT`, or `INDIGO_LOCAL_PLATFORM`.
+
 ## Unraid application package
 
 Community Applications metadata is maintained separately in [dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid). This repository owns the application source, Dockerfile, runtime documentation, tests, and image release workflow. The packaging repository owns the Unraid template, icon, CA profile, packaging license, and submission documentation.

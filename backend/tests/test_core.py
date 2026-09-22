@@ -200,6 +200,8 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
             self.assertEqual(client.get('/api/history?start=10&end=5').status_code,400)
     def test_units_and_daily_forecast_api(self):
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
         from fastapi.testclient import TestClient
         from backend.app import app
         with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
@@ -213,9 +215,15 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(bad.status_code,400)
             import time
             now=int(time.time())//3600*3600
+            zone=ZoneInfo('America/Los_Angeles')
+            db.set_settings({'timezone':zone.key})
+            midnight=datetime.fromtimestamp(now,zone).replace(hour=0,minute=0,second=0,microsecond=0)
+            daily_valid=int(midnight.timestamp())
+            duplicate_valid=int((midnight+timedelta(hours=17)).timestamp())
             jobs.store_forecasts([
                 (now, now+3600, 'weather', 72.0, 50.0, None, 5.0, 20.0, None, 2, 8.5, 74.0, 40.0, None, None, None),
-                (now, now+3600, 'daily', 75.0, None, None, None, None, None, 2, None, None, None, now+20000, now+60000, 55.0)
+                (now-60, duplicate_valid, 'daily', 70.0, None, None, None, None, None, 3, None, None, None, now+20000, now+60000, 50.0),
+                (now, daily_valid, 'daily', 75.0, None, None, None, None, None, 2, None, None, None, now+20000, now+60000, 55.0)
             ])
             f_res=client.get('/api/forecast')
             self.assertEqual(f_res.status_code,200)

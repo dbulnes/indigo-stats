@@ -122,7 +122,11 @@ export function SystemSettings() {
     }
   }
   
-  if (loading) return <div>Loading settings...</div>
+  if (loading) return <div className="settings-skeleton" role="status" aria-label="Loading system settings">
+    <span className="skeleton-line wide" />
+    <span className="skeleton-line" />
+    <span className="skeleton-line short" />
+  </div>
   return <form onSubmit={save} className="settings-form">
     <div className="form-group"><label>Sensor Host / IP</label><input name="SENSOR_HOST" value={settings.SENSOR_HOST||''} onChange={handleChange} placeholder="Update private IP..."/></div>
     <div className="form-group">
@@ -134,65 +138,44 @@ export function SystemSettings() {
     </div>
     <div className="form-group"><label>Forecast Enabled</label><select name="FORECAST_ENABLED" value={settings.FORECAST_ENABLED||'false'} onChange={handleChange}><option value="true">True</option><option value="false">False</option></select></div>
     
-    <div className="form-group" style={{padding: '16px', background: '#172130', borderRadius: '8px', position: 'relative', border: '1px solid #2b3646'}}>
-      <label style={{marginBottom: '4px'}}>Forecast Location (Lat/Lon)</label>
-      <p style={{fontSize: '0.85em', opacity: 0.7, margin: '0 0 12px 0'}}>
+    <div className="form-group settings-location">
+      <label>Forecast Location (Lat/Lon)</label>
+      <p className="settings-location-copy">
         {settings.HAS_FORECAST_LOCATION === 'true' && !settings.FORECAST_LATITUDE 
           ? 'Coordinates are currently configured (hidden for privacy).' 
           : 'Set coordinates to enable regional forecasting.'}
       </p>
       
-      <div style={{position: 'relative'}} ref={dropdownRef}>
+      <div className="address-lookup" ref={dropdownRef}>
         <input 
           value={address} 
           onChange={e=>setAddress(e.target.value)} 
           placeholder="Type any full street address or city..." 
-          style={{width: '100%', marginBottom: '12px'}}
+          className="address-input"
         />
         {results.length > 0 && (
-          <div style={{
-            position: 'absolute', 
-            top: '100%', 
-            left: 0, 
-            right: 0,
-            zIndex: 50, 
-            background: '#1a2332', 
-            border: '1px solid #3b4a60', 
-            borderRadius: '6px', 
-            marginTop: '4px', 
-            maxHeight: '220px', 
-            overflowY: 'auto',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
-          }}>
-            {results.map((r, i) => (
-              <div 
-                key={i} 
+          <div className="suggestion-list">
+            {results.map(r => (
+              <button
+                type="button"
+                key={r.magicKey}
                 onClick={() => selectResult(r)} 
-                style={{
-                  padding: '12px 16px', 
-                  cursor: 'pointer', 
-                  borderBottom: i === results.length - 1 ? 'none' : '1px solid #2b3646', 
-                  display: 'flex',
-                  alignItems: 'center',
-                  transition: 'background 0.15s ease'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#26354a')}
-                onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                className="suggestion-item"
               >
-                <span style={{fontSize: '0.95em', color: '#d2dbea'}}>{r.text}</span>
-              </div>
+                {r.text}
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      {lookupState && <div style={{fontSize: '0.85em', color: '#70d8c2', marginBottom: '12px'}}>{lookupState}</div>}
+      {lookupState && <div className={`lookup-state ${lookupState.startsWith('Error') ? 'error' : ''}`} role="status">{lookupState}</div>}
       
-      <div style={{display: 'flex', gap: '12px'}}>
-        <div style={{flex: 1}}>
+      <div className="coordinate-grid">
+        <div>
           <input name="FORECAST_LATITUDE" value={settings.FORECAST_LATITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Latitude"/>
         </div>
-        <div style={{flex: 1}}>
+        <div>
           <input name="FORECAST_LONGITUDE" value={settings.FORECAST_LONGITUDE||''} onChange={handleChange} onBlur={handleBlur} placeholder="Longitude"/>
         </div>
       </div>
@@ -202,7 +185,7 @@ export function SystemSettings() {
     <div className="form-group"><label>Environment Mode</label><select name="ENVIRONMENT_MODE" value={settings.ENVIRONMENT_MODE||'purpleair'} onChange={handleChange}><option value="purpleair">PurpleAir estimated ambient</option><option value="raw">Raw operating readings</option><option value="simple">Simple correction</option></select></div>
     <div className="form-group"><label>Placement</label><select name="SENSOR_PLACEMENT" value={settings.SENSOR_PLACEMENT||'outdoors'} onChange={handleChange}><option value="outdoors">Outdoors</option><option value="indoors">Indoors</option></select></div>
     <div className="form-group"><label>Units</label><select name="UNITS" value={settings.UNITS||'imperial'} onChange={handleChange}><option value="imperial">Imperial (°F, mph)</option><option value="metric">Metric (°C, km/h)</option></select></div>
-    <div className="form-actions"><button type="submit" disabled={saving}>{saving?'Saving...':'Save Settings'}</button></div>
-    {msg.text && <div className={`notice ${msg.type}`}>{msg.text}</div>}
+    <div className="form-actions"><button type="submit" disabled={saving} aria-busy={saving}>{saving?'Saving…':'Save Settings'}</button></div>
+    {msg.text && <div className={`notice ${msg.type}`} role={msg.type === 'error' ? 'alert' : 'status'} aria-live="polite">{msg.text}</div>}
   </form>
 }

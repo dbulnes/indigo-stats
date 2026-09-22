@@ -148,7 +148,11 @@ export function BackupSettings() {
     })
   }
 
-  if (!status) return <p className="muted">Loading backup configuration…</p>
+  if (!status) return <div className="settings-skeleton" role="status" aria-label="Loading backup configuration">
+    <span className="skeleton-line wide" />
+    <span className="skeleton-line" />
+    <span className="skeleton-line short" />
+  </div>
   const savedActionsDisabled = Boolean(busy) || dirty || !status.enabled
 
   return <div className="backup-settings">
@@ -157,7 +161,7 @@ export function BackupSettings() {
       <div><strong>Off-server copies</strong><span>{status.enabled ? `${status.provider.replace('_', ' ')} · latest ${status.remote_retention} completed retained` : 'Disabled'}</span></div>
       <div><strong>Last remote success</strong><span>{status.enabled ? when(status.last_success) : 'Disabled'}</span></div>
     </div>
-    {status.error && <div className="notice error">{status.error}</div>}
+    {status.error && <div className="notice error" role="alert">{status.error}</div>}
     <div className="form-group">
       <label>Destination</label>
       <select value={provider} onChange={event => { setProvider(event.target.value as Provider); setDirty(true) }}>
@@ -187,11 +191,11 @@ export function BackupSettings() {
     </div>}
     {dirty && <p className="muted small">Save this destination before testing or starting a backup.</p>}
     <div className="backup-actions">
-      <button onClick={save} disabled={Boolean(busy) || !dirty}>{busy === 'save' ? 'Saving…' : 'Save destination'}</button>
-      <button className="secondary" onClick={() => void action('test', '/api/backups/test', { method: 'POST' })} disabled={savedActionsDisabled}>Test connection</button>
-      <button className="secondary" onClick={() => void action('run', '/api/backups/run', { method: 'POST' })} disabled={savedActionsDisabled}>Back up now</button>
+      <button onClick={save} disabled={Boolean(busy) || !dirty} aria-busy={busy === 'save'}>{busy === 'save' ? 'Saving…' : 'Save destination'}</button>
+      <button className="secondary" onClick={() => void action('test', '/api/backups/test', { method: 'POST' })} disabled={savedActionsDisabled} aria-busy={busy === 'test'}>{busy === 'test' ? 'Testing…' : 'Test connection'}</button>
+      <button className="secondary" onClick={() => void action('run', '/api/backups/run', { method: 'POST' })} disabled={savedActionsDisabled} aria-busy={busy === 'run'}>{busy === 'run' ? 'Starting…' : 'Back up now'}</button>
     </div>
-    {message.text && <div className={`notice ${message.type}`}>{message.text}</div>}
+    {message.text && <div className={`notice ${message.type}`} role={message.type === 'error' ? 'alert' : 'status'} aria-live="polite">{message.text}</div>}
     <p className="muted small">Remote snapshots contain private settings and raw sensor metadata. Indigo Stats does not add client-side encryption; protect the destination with provider/filesystem access controls and encryption.</p>
   </div>
 }

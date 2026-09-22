@@ -4,7 +4,9 @@ import io
 import os
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -264,13 +266,23 @@ def history(start:int=Query(ge=0),end:int=Query(ge=0),step:int=Query(default=60,
 @app.get('/api/forecast')
 def forecast():
     now=int(time.time())//3600*3600
+    timezone=ZoneInfo(db.settings().get('timezone','Etc/UTC'))
+    today=datetime.fromtimestamp(now,timezone).date()
     with db.connect() as con:
         hourly=forecast_rows(con,now,now+3*86400,False)
-        daily=[dict(r) for r in con.execute(
+        candidates=[dict(r) for r in con.execute(
             '''SELECT * FROM forecasts WHERE kind='daily' AND valid >= ? AND valid < ?
             AND fetched = (SELECT MAX(f.fetched) FROM forecasts f
             WHERE f.kind='daily' AND f.valid=forecasts.valid)
             ORDER BY valid''', (now-86400, now+11*86400))]
+    # A location/timezone change can leave forecasts for the same local date at
+    # different UTC timestamps. Keep the freshest row for each displayed day.
+    by_date={}
+    for row in candidates:
+        local_date=datetime.fromtimestamp(row['valid'],timezone).date()
+        if local_date>=today and (local_date not in by_date or row['fetched']>by_date[local_date]['fetched']):
+            by_date[local_date]=row
+    daily=[by_date[day] for day in sorted(by_date)[:10]]
     for row in hourly:
         row['aqi']=aqi(row['pm25'])
     return {'points':hourly, 'daily':daily}

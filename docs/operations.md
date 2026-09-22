@@ -49,6 +49,24 @@ Pull or build the next image while the existing app runs. Note the current image
 
 Container recreation is reversible because state is outside the container. Do not run both old and new application containers simultaneously against the same volume: they would run duplicate schedulers.
 
+### Local review container
+
+On an Apple Silicon development Mac, rebuild and replace the localhost-only review container with one command from the repository root:
+
+```sh
+sh scripts/refresh-local.sh
+```
+
+The command always completes these stages in order:
+
+1. Build `indigo-stats:local` for `linux/arm64`.
+2. Run `deploy/smoke-test.sh` against disposable data and offsite volumes. The smoke test cannot be skipped.
+3. Confirm that an existing `indigo-stats-local` container uses the expected `indigo-stats-local-data` `/data` volume. A mismatch stops the script before replacement.
+4. Gracefully stop and remove only that container, then recreate it with the same persistent volume, production security restrictions, and a loopback-only `127.0.0.1:8765` port.
+5. Wait for the health endpoint before reporting success.
+
+The script never removes the data volume. It is for the local review container only and does not deploy to Unraid or another host. Change a default for a separate development instance with `INDIGO_LOCAL_IMAGE`, `INDIGO_LOCAL_CONTAINER`, `INDIGO_LOCAL_DATA_VOLUME`, `INDIGO_LOCAL_PORT`, or `INDIGO_LOCAL_PLATFORM`. When selecting an existing instance, set both its container and data-volume values so the mount safety check can protect the correct data.
+
 ## Restore
 
 Stop the application. Preserve the entire existing data directory in a separate recovery location, including WAL/SHM files. Make a new empty data directory with appropriate ownership, copy the selected consistent backup into it as `indigo.sqlite`, and launch the matching image using that directory. Do not combine a restored database file with WAL files from another database state. Run the integrity check and inspect historical counts before resuming normal operation.
