@@ -132,6 +132,33 @@ info "Pushing tag ${TAG} to origin…"
 git push origin "$TAG"
 ok "Tag pushed — release workflow triggered"
 
+# ── Wait for GHCR Release ───────────────────────────────────────────────
+if command -v gh >/dev/null 2>&1; then
+  info "Waiting for GHCR release workflow to complete on ${TAG}…"
+  RELEASE_RUN_ID=""
+  for attempt in $(seq 1 30); do
+    RELEASE_RUN_ID="$(gh run list --workflow=release.yml --json databaseId,headBranch       -q ".[] | select(.headBranch == \"$TAG\") | .databaseId" 2>/dev/null | head -1 || echo "")"
+    if [ -n "$RELEASE_RUN_ID" ] && [ "$RELEASE_RUN_ID" != "null" ]; then
+      break
+    fi
+    RELEASE_RUN_ID=""
+    if [ "$attempt" -lt 30 ]; then
+      printf "  Waiting for release workflow to appear (attempt %s/30)…\n" "$attempt"
+      sleep 5
+    fi
+  done
+
+  if [ -n "$RELEASE_RUN_ID" ]; then
+    if gh run watch --exit-status "$RELEASE_RUN_ID"; then
+      ok "GHCR release published successfully"
+    else
+      die "GHCR release workflow failed on GitHub Actions"
+    fi
+  else
+    warn "Could not locate release workflow for ${TAG}"
+  fi
+fi
+
 # ── Summary ─────────────────────────────────────────────────────────
 printf "\n${BOLD}${GREEN}Release ${VERSION} complete!${RESET}\n"
 printf "  Commit:   ${SHORT_SHA}\n"
@@ -142,6 +169,6 @@ printf "  Package:  https://github.com/dbulnes/indigo-stats/pkgs/container/indig
 # ── Unraid Deployment ───────────────────────────────────────────────────
 if [ "${DEPLOY_UNRAID:-1}" = "1" ] && [ -f "$REPO_ROOT/scripts/deploy-unraid.sh" ]; then
   printf "\n"
-  info "Deploying ${TAG} to Unraid via sshhomelab…"
-  "$REPO_ROOT/scripts/deploy-unraid.sh" "IndigoStats" "${TAG}"
+  info "Deploying to Unraid via deploy-unraid.sh…"
+  "$REPO_ROOT/scripts/deploy-unraid.sh" "IndigoStats"
 fi

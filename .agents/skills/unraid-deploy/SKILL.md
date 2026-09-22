@@ -11,6 +11,8 @@ description: >-
 
 This skill automates what is normally done manually in the Unraid Docker Web UI: pulling the latest container image from GHCR, updating Tailscale container hook configurations, gracefully stopping and recreating the container using Unraid's user template (`my-IndigoStats.xml`), pruning orphaned images, and verifying API health.
 
+Local checks, git tagging, and GitHub Actions container image publishing (GHCR) are managed by `scripts/release.sh`. This deployment skill and script focus purely on the Unraid server update portion.
+
 ## SSH Host & Alias Resolution
 
 The skill dynamically resolves the user's `sshhomelab` alias configured in `~/.zshrc`:
@@ -44,21 +46,14 @@ This script:
 
 ## Automated Deployment Helper
 
-A deployment helper script is provided at [`scripts/deploy-unraid.sh`](file:///Users/davidbulnes/git/indigo-stats/scripts/deploy-unraid.sh).
+A deployment helper script is provided at [`scripts/deploy-unraid.sh`](file:///Users/davidbulnes/git/indigo-stats/scripts/deploy-unraid.sh). It executes strictly the Unraid container recreation and health check.
 
 ### Usage
 
-1. **Deploy immediately**:
-   ```bash
-   scripts/deploy-unraid.sh IndigoStats
-   ```
-
-2. **Wait for GitHub Actions release workflow before deploying**:
-   ```bash
-   scripts/deploy-unraid.sh IndigoStats v0.7.2
-   # Or auto-detect latest tag:
-   scripts/deploy-unraid.sh IndigoStats --wait-latest
-   ```
+```bash
+# Update IndigoStats container on Unraid:
+scripts/deploy-unraid.sh IndigoStats
+```
 
 ## Verification Steps
 
