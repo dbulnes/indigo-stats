@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import Mock, patch
 from backend import db,jobs
@@ -107,13 +108,13 @@ class DatabaseTests(unittest.TestCase):
         migration=db.DATA/'migration.sql'
         migration.write_text('BEGIN IMMEDIATE;\nCREATE TABLE sample (id INTEGER);\nCOMMIT;\n')
         database=db.DATA/'migration-test.sqlite'
-        with sqlite3.connect(database) as con:
+        with closing(sqlite3.connect(database)) as con:
             con.executescript(db._versioned_migration(migration,7))
             self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],7)
             self.assertIsNotNone(con.execute("SELECT name FROM sqlite_master WHERE name='sample'").fetchone())
         broken=db.DATA/'broken.sql'
         broken.write_text('BEGIN IMMEDIATE;\nCREATE TABLE partial (id INTEGER);\nSELECT missing FROM nowhere;\nCOMMIT;\n')
-        with sqlite3.connect(database) as con:
+        with closing(sqlite3.connect(database)) as con:
             with self.assertRaises(sqlite3.OperationalError): con.executescript(db._versioned_migration(broken,8))
             con.rollback()
             self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],7)
@@ -164,7 +165,7 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(tuple(con.execute('SELECT temperature_raw,environment_mode FROM readings').fetchone()),(81,'raw'))
         backups=list((db.DATA/'backups').glob('*.sqlite'))
         self.assertEqual(len(backups),1)
-        with sqlite3.connect(backups[0]) as con:
+        with closing(sqlite3.connect(backups[0])) as con:
             self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],1)
             self.assertEqual(con.execute('SELECT temperature_raw FROM readings').fetchone()[0],81)
     def test_private_environment_validation_and_forecast_opt_in(self):

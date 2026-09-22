@@ -78,6 +78,8 @@ async def headers(request,call_next):
     response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://geocode.arcgis.com https://api.open-meteo.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     if request.url.path.startswith('/api/') or request.url.path in ('/sw.js','/index.html','/'):
         response.headers['Cache-Control']='no-store'
+    elif request.url.path.startswith('/assets/'):
+        response.headers['Cache-Control']='public, max-age=31536000, immutable'
     return response
 
 @app.get('/api/health')

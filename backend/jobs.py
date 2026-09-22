@@ -34,6 +34,10 @@ async def collect():
                 await asyncio.sleep(2*(attempt+1))
     await asyncio.to_thread(db.status,'sensor',success=True)
 
+def _series_val(series, key, i, low=0, high=10000):
+    vals = series.get(key)
+    return number(vals[i], low, high) if vals is not None and i < len(vals) else None
+
 async def weather():
     cfg=await asyncio.to_thread(db.settings)
     if not cfg.get('forecast_enabled',False):
@@ -58,8 +62,9 @@ async def weather():
             data=response.json()
             h=data['hourly']
             rows=[]
+            i=0
+            val=lambda key,low=0,high=10000: _series_val(h,key,i,low,high)
             for i,t in enumerate(h['time']):
-                val=lambda key,low=0,high=10000: number(h.get(key,[None]*len(h['time']))[i],low,high)
                 w_code = int(w) if (w := val('weather_code',0,99)) is not None else None
                 rows.append((now,t,kind,
                     val('temperature_2m',-100,200),
@@ -75,8 +80,9 @@ async def weather():
                     None, None, None))
             if kind=='weather' and 'daily' in data:
                 d=data['daily']
+                i=0
+                dval=lambda key,low=0,high=10000: _series_val(d,key,i,low,high)
                 for i,t in enumerate(d['time']):
-                    dval=lambda key,low=0,high=10000: number(d.get(key,[None]*len(d['time']))[i],low,high)
                     dw_code = int(w) if (w := dval('weather_code',0,99)) is not None else None
                     sunrise = int(s) if (s := dval('sunrise',0,2500000000)) is not None else None
                     sunset = int(s) if (s := dval('sunset',0,2500000000)) is not None else None
@@ -98,11 +104,6 @@ def store_forecasts(rows):
 def maintenance():
     now=int(time.time())
     with db.connect() as con:
-        for span in (3600,86400):
-            con.execute('''INSERT OR REPLACE INTO summaries
-                SELECT ts/?*?, ?, COUNT(*),AVG(temperature),AVG(humidity),AVG(pm25),
-                MIN(temperature),MAX(temperature),MIN(pm25),MAX(pm25)
-                FROM readings WHERE ts>=? GROUP BY ts/?''',(span,span,span,now-3*86400,span))
         con.execute('DELETE FROM raw_samples WHERE ts<?',(now-30*86400,))
         # Preserve one pre-target snapshot per kind/hour for past forecast evaluation.
         con.execute('''DELETE FROM forecasts WHERE valid<? AND fetched <
@@ -127,8 +128,8 @@ async def offsite_backup():
 async def loop(name,task,interval):
     while True:
         try:
-            if name=='maintenance': await asyncio.to_thread(task)
-            else: await task()
+            if asyncio.iscoroutinefunction(task): await task()
+            else: await asyncio.to_thread(task)
         except asyncio.CancelledError:
             raise
         except Exception as exc:

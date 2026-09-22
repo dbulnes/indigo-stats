@@ -7,8 +7,8 @@ import {
   Gauge, History, LayoutDashboard, RefreshCw, Settings2, ShieldCheck,
   Thermometer, Waves, Wind, Sun, Cloud, Moon
 } from 'lucide-react'
-import { SystemSettings } from './SystemSettings'
-import { BackupSettings } from './BackupSettings'
+const SystemSettings = React.lazy(() => import('./SystemSettings').then(m => ({ default: m.SystemSettings })))
+const BackupSettings = React.lazy(() => import('./BackupSettings').then(m => ({ default: m.BackupSettings })))
 import { weatherCondition, uvLabel, toC, toKmh } from './weather'
 import './style.css'
 
@@ -196,7 +196,7 @@ function App() {
     const ctrl = new AbortController()
     setLoading(true)
     setError('')
-    const params = `start=${start}&end=${end}&step=60${environmentMode ? `&environment=${environmentMode}` : ''}${threshold !== '' ? `&threshold=${encodeURIComponent(threshold)}` : ''}`
+    const params = `start=${start}&end=${end}&step=60${environmentMode ? `&environment=${environmentMode}` : ''}`
     Promise.all([
       get<Latest>(`/api/latest${environmentMode ? `?environment=${environmentMode}` : ''}`, ctrl.signal),
       get<Status>('/api/status', ctrl.signal),
@@ -221,7 +221,7 @@ function App() {
         if (!ctrl.signal.aborted) setLoading(false)
       })
     return () => ctrl.abort()
-  }, [start, end, tick, comparison, threshold, environmentMode])
+  }, [start, end, tick, comparison, environmentMode])
 
   const toggleUnits = async () => {
     const next = units === 'imperial' ? 'metric' : 'imperial'
@@ -253,12 +253,17 @@ function App() {
     return d.toLocaleDateString(undefined, { timeZone: tz, weekday: 'short' })
   }
 
+  const hourFormatter = useMemo(
+    () => new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }),
+    [tz]
+  )
+
   const isDaytime = (ts: number) => {
     const d = dailyForecast.find(df => Math.abs(df.valid - ts) < 86400)
     if (d?.sunrise && d?.sunset) {
       return ts >= d.sunrise && ts < d.sunset
     }
-    const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(new Date(ts * 1000)))
+    const hour = Number(hourFormatter.format(new Date(ts * 1000)))
     return hour >= 6 && hour < 20
   }
 
@@ -400,7 +405,7 @@ function App() {
     for (const p of history.points) {
       const v = getMetric(p, metric)
       if (v != null) {
-        const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(new Date(p.ts * 1000)))
+        const hour = Number(hourFormatter.format(new Date(p.ts * 1000)))
         values[hour].push(v)
       }
     }
@@ -408,7 +413,15 @@ function App() {
       hour: `${h.toString().padStart(2, '0')}:00`,
       value: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null,
     }))
-  }, [history, metric, tz, units])
+  }, [history, metric, hourFormatter, units])
+
+  const filteredPoints = useMemo(() => {
+    const thresh = threshold.trim() !== '' ? Number(threshold) : null
+    return [...history.points]
+      .reverse()
+      .filter(p => thresh === null || (p.pm_max != null && p.pm_max >= thresh) || Boolean(p.above_threshold))
+      .slice(0, 100)
+  }, [history.points, threshold])
 
   const stats = history.stats
   const coverage = Math.min(100, (stats.samples / Math.max(1, (Math.min(end, Date.now() / 1000) - start) / 60)) * 100)
@@ -431,7 +444,7 @@ function App() {
   }
 
   // Weather condition details for Hero
-  const nowTs = Date.now() / 1000
+  const nowTs = anchor
   const currentWeatherCond = weatherCondition(activeWeather.weather_code, isDaytime(nowTs))
   const WeatherIcon = currentWeatherCond.icon
 
@@ -1198,11 +1211,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...history.points]
-                      .reverse()
-                      .filter(p => threshold === '' || p.above_threshold)
-                      .slice(0, 100)
-                      .map(p => (
+                    {filteredPoints.map(p => (
                         <tr key={p.ts} className={p.above_threshold ? 'highlight' : ''}>
                           <td>{time(p.ts, true)}{p.flagged > 0 && <span title="One or more samples has a quality flag"> *</span>}</td>
                           <td>{fmt(p.pm25)}</td>
@@ -1233,7 +1242,7 @@ function App() {
                   <dt>Last reading</dt>
                   <dd>{relative(status?.readings.last)}</dd>
                   <dt>Application</dt>
-                  <dd>v{status?.version ?? '0.5.2'}</dd>
+                  <dd>{status?.version ? `v${status.version}` : '—'}</dd>
                 </dl>
               </article>
               <article className="panel">
@@ -1245,7 +1254,9 @@ function App() {
             </section>
             <section className="panel">
               <div className="panel-heading"><h2>Backup destination</h2><span className="pill">Verified SHA-256 copies</span></div>
-              <BackupSettings />
+              <React.Suspense fallback={<div className="notice">Loading backup settings…</div>}>
+                <BackupSettings />
+              </React.Suspense>
             </section>
             <section className="panel">
               <div className="panel-heading">
@@ -1279,7 +1290,9 @@ function App() {
               <div className="panel-heading">
                 <h2>System Settings</h2>
               </div>
-              <SystemSettings />
+              <React.Suspense fallback={<div className="notice">Loading system settings…</div>}>
+                <SystemSettings />
+              </React.Suspense>
             </section>
           </>
         )}
