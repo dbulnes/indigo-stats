@@ -223,13 +223,14 @@ def export(start:int=Query(ge=0),end:int=Query(ge=0)):
     return StreamingResponse(chunks(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename="indigo-readings.csv"'})
 
 WEB=Path(os.getenv('WEB_DIR',str(Path(__file__).parent.parent/'web'/'dist')))
-if WEB.exists():
-    if (WEB/'assets').exists(): app.mount('/assets',StaticFiles(directory=WEB/'assets'),name='assets')
-    @app.get('/{path:path}')
-    def frontend(path:str):
-        if path.startswith('api/') or path=='api': raise HTTPException(404)
-        resolved=(WEB/path).resolve()
-        if not resolved.is_relative_to(WEB.resolve()): raise HTTPException(404)
-        if resolved.is_file(): return FileResponse(resolved)
-        if '.' in path: raise HTTPException(404)
-        return FileResponse(WEB/'index.html')
+if (WEB/'assets').exists(): app.mount('/assets',StaticFiles(directory=WEB/'assets'),name='assets')
+@app.get('/{path:path}')
+def frontend(path:str):
+    if not WEB.exists(): raise HTTPException(404)
+    if path.startswith('api/') or path=='api': raise HTTPException(404)
+    resolved=(WEB/path).resolve()
+    if not resolved.is_relative_to(WEB.resolve()): raise HTTPException(404)
+    if resolved.is_file(): return FileResponse(resolved)
+    if '.' in path: raise HTTPException(404)
+    if not (WEB/'index.html').exists(): raise HTTPException(404)
+    return FileResponse(WEB/'index.html')
