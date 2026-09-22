@@ -12,12 +12,12 @@
 | backend/db.py                      |       63 |        0 |     100% |           |
 | backend/jobs.py                    |       96 |        0 |     100% |           |
 | backend/manage.py                  |       38 |        0 |     100% |           |
-| backend/tests/test\_backup\_api.py |      113 |        0 |     100% |           |
+| backend/tests/test\_backup\_api.py |      114 |        0 |     100% |           |
 | backend/tests/test\_backups.py     |      426 |        0 |     100% |           |
 | backend/tests/test\_core.py        |      277 |        0 |     100% |           |
 | backend/tests/test\_jobs.py        |       94 |        0 |     100% |           |
 | backend/tests/test\_manage.py      |       69 |        0 |     100% |           |
-| **TOTAL**                          | **1953** |    **0** | **100%** |           |
+| **TOTAL**                          | **1954** |    **0** | **100%** |           |
 
 
 ## Setup coverage badge
