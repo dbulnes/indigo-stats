@@ -26,6 +26,35 @@ class ManageTests(unittest.TestCase):
         self.assertIn('integrity: ok',self.run_cli(['check']))
         with self.assertRaises(SystemExit) as error: self.run_cli(['configure'],'{"credential":"PRIVATE"}')
         self.assertNotIn('PRIVATE',str(error.exception))
+        with self.assertRaises(SystemExit) as error: self.run_cli(['configure'],'{"latitude": 999}')
+        self.assertIn('Invalid private configuration', str(error.exception))
+
+    def test_check_integrity_failure(self):
+        real_connect = db.connect
+        from contextlib import contextmanager
+        from unittest.mock import Mock
+
+        class ConProxy:
+            def __init__(self, con):
+                self._con = con
+            def execute(self, sql, *args, **kwargs):
+                if 'integrity_check' in sql:
+                    mock_cur = Mock()
+                    mock_cur.fetchone.return_value = ('corrupt',)
+                    return mock_cur
+                return self._con.execute(sql, *args, **kwargs)
+            def __getattr__(self, name):
+                return getattr(self._con, name)
+
+        @contextmanager
+        def fake_connect():
+            with real_connect() as con:
+                yield ConProxy(con)
+
+        with patch('backend.db.connect', side_effect=fake_connect):
+            with self.assertRaises(SystemExit) as error:
+                self.run_cli(['check'])
+            self.assertIn('Integrity check failed', str(error.exception))
 
     def test_remote_list_accepts_stdin_config_without_secrets(self):
         item=backups.RemoteSnapshot('20260921T120000Z.sqlite','a'*64,123,1,'PRIVATE REFERENCE')
@@ -34,12 +63,22 @@ class ManageTests(unittest.TestCase):
         remote.assert_called_once_with({'provider':'filesystem'})
         self.assertIn(item.filename,output); self.assertIn(item.checksum,output); self.assertNotIn('PRIVATE REFERENCE',output)
 
+        with patch.object(backups, 'remote_list', side_effect=backups.BackupError('connection refused')):
+            with self.assertRaises(SystemExit) as error:
+                self.run_cli(['remote-list'])
+            self.assertIn('connection refused', str(error.exception))
+
     def test_remote_fetch_reports_recovery_path_and_requires_name(self):
         with self.assertRaises(SystemExit): self.run_cli(['remote-fetch'])
         target=Path(self.temp.name)/'recovery'/'20260921T120000Z.sqlite'
         with patch.object(backups,'fetch',return_value=target) as fetch:
             output=self.run_cli(['remote-fetch',target.name])
         fetch.assert_called_once_with(target.name,None); self.assertIn('live database was not changed',output)
+
+        with patch.object(backups, 'fetch', side_effect=backups.BackupError('file not found')):
+            with self.assertRaises(SystemExit) as error:
+                self.run_cli(['remote-fetch', target.name])
+            self.assertIn('file not found', str(error.exception))
 
 
 if __name__=='__main__': unittest.main()

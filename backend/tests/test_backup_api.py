@@ -45,6 +45,48 @@ class BackupApiTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/backups/google/unlink').status_code,200)
         self.assertFalse(backups.token_file().exists()); self.assertEqual(db.settings()['marker'],'keep')
 
+    def test_google_connect(self):
+        with patch.object(backups, 'google_authorization_url', return_value='https://accounts.google.com/o/oauth2/auth?client_id=test'):
+            res = self.client.get('/api/backups/google/connect', follow_redirects=False)
+            self.assertEqual(res.status_code, 302)
+            self.assertEqual(res.headers['location'], 'https://accounts.google.com/o/oauth2/auth?client_id=test')
+
+        with patch.object(backups, 'google_authorization_url', side_effect=backups.BackupError('OAuth not configured')):
+            res = self.client.get('/api/backups/google/connect', follow_redirects=False)
+            self.assertEqual(res.status_code, 400)
+            self.assertIn('OAuth not configured', res.text)
+
+    def test_google_callback(self):
+        with patch.object(backups, 'google_callback') as mock_cb:
+            res = self.client.get('/api/backups/google/callback?code=authcode&state=authstate')
+            self.assertEqual(res.status_code, 200)
+            self.assertIn('Google Drive linked', res.text)
+            mock_cb.assert_called_once_with('authcode', 'authstate')
+
+        with patch.object(backups, 'google_callback', side_effect=backups.BackupError('expired session')):
+            res = self.client.get('/api/backups/google/callback?code=authcode&state=authstate')
+            self.assertEqual(res.status_code, 400)
+            self.assertIn('expired session', res.text)
+
+        with patch.object(backups, 'google_callback', side_effect=RuntimeError('oauth failed')):
+            res = self.client.get('/api/backups/google/callback?code=authcode&state=authstate')
+            self.assertEqual(res.status_code, 502)
+            self.assertIn('Google authorization failed', res.text)
+
+    def test_lifespan_starts_and_cancels_jobs(self):
+        async def dummy_loop(name, task, interval):
+            try:
+                while True:
+                    await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                pass
+
+        with patch.dict('os.environ', {'DISABLE_JOBS': '0'}):
+            with patch('backend.jobs.loop', side_effect=dummy_loop):
+                with TestClient(app) as test_client:
+                    res = test_client.get('/api/health')
+                    self.assertEqual(res.status_code, 200)
+
 
 class BackupJobTests(unittest.TestCase):
     def setUp(self):

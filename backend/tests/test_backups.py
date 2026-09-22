@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import types
 import unittest
 from pathlib import Path
@@ -197,6 +198,322 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(captured['code_challenge_method'],'S256'); self.assertNotIn('=',captured['code_challenge'])
         token=backups.token_file(); self.assertEqual(token.stat().st_mode & 0o777,0o600)
         self.assertNotIn('PRIVATE',json.dumps(db.settings()))
+
+    def test_safe_error_and_auth_error_branches(self):
+        self.assertEqual(backups._safe_error(backups.RelinkRequired('relink')), 'Google Drive must be linked again')
+        refresh_err = type('RefreshError', (Exception,), {})()
+        self.assertEqual(backups._safe_error(refresh_err), 'Google Drive must be linked again')
+        http_401 = Exception()
+        http_401.resp = types.SimpleNamespace(status=401)
+        self.assertEqual(backups._safe_error(http_401), 'Google Drive must be linked again')
+        self.assertEqual(backups._safe_error(backups.BackupError('custom error')), 'custom error')
+        self.assertEqual(backups._safe_error(RuntimeError('generic')), 'RuntimeError: transfer failed; will retry')
+
+    def test_config_validation_edge_cases(self):
+        with self.assertRaises(ValueError): backups.validate_config("not-a-dict")
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 'invalid'})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 'disabled', 'extra': 1})
+        self.assertEqual(backups.validate_config({'provider': 'disabled'}), {'provider': 'disabled'})
+        self.assertEqual(backups.validate_config({'provider': 'google_drive'}), {'provider': 'google_drive'})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 's3', 'bucket': ''})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 's3', 'bucket': 'a' * 256})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 's3', 'bucket': 'b', 'prefix': 'a/../b'})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 's3', 'bucket': 'b', 'prefix': 'a' * 513})
+        with self.assertRaises(ValueError): backups.validate_config({'provider': 's3', 'bucket': 'b', 'encryption': 'invalid'})
+
+    def test_parse_manifest_validation(self):
+        with self.assertRaises(backups.BackupError):
+            backups._parse_manifest(b'{"format": 2, "filename": "20260921T120000Z.sqlite", "sha256": "' + b'0'*64 + b'", "size": 10, "created_at": 1}')
+        with self.assertRaises(backups.BackupError):
+            backups._parse_manifest(b'{"format": 1, "filename": "bad-name.txt", "sha256": "' + b'0'*64 + b'", "size": 10, "created_at": 1}')
+        with self.assertRaises(backups.BackupError):
+            backups._parse_manifest(b'{"format": 1, "filename": "20260921T120000Z.sqlite", "sha256": "badhex", "size": 10, "created_at": 1}')
+        with self.assertRaises(backups.BackupError):
+            backups._parse_manifest(b'{"format": 1, "filename": "20260921T120000Z.sqlite", "sha256": "' + b'0'*64 + b'", "size": 0, "created_at": 1}')
+        with self.assertRaises(backups.BackupError):
+            backups._parse_manifest(b'invalid json')
+
+    def test_filesystem_provider_edge_cases(self):
+        provider = backups.FilesystemProvider(self.root)
+        with patch('os.path.ismount', side_effect=self.mounted), patch('os.access', return_value=False):
+            with self.assertRaises(backups.BackupError) as err:
+                provider.probe()
+            self.assertIn('not writable', str(err.exception))
+
+        with patch('os.path.ismount', side_effect=self.mounted), patch('os.access', side_effect=[True, False]):
+            (self.root / 'indigo-stats').mkdir(exist_ok=True)
+            with self.assertRaises(backups.BackupError) as err:
+                provider.probe()
+            self.assertIn('not writable', str(err.exception))
+
+        with self.assertRaises(backups.BackupError) as err:
+            provider._path('../sneaky')
+        self.assertIn('Invalid remote backup name', str(err.exception))
+
+        import shutil
+        shutil.rmtree(self.root / 'indigo-stats', ignore_errors=True)
+        (self.root / 'indigo-stats').symlink_to(self.root)
+        with self.assertRaises(backups.BackupError) as err:
+            provider._path('20260921T120000Z.sqlite')
+        self.assertIn('must not be a symlink', str(err.exception))
+        (self.root / 'indigo-stats').unlink()
+
+        snapshot = db.backup()
+        data = backups.manifest(snapshot)
+        with patch('os.path.ismount', side_effect=self.mounted), patch.object(backups, 'checksum', return_value='wrong-checksum'):
+            with self.assertRaises(backups.BackupError) as err:
+                provider.upload(snapshot, data)
+            self.assertIn('Off-server copy verification failed', str(err.exception))
+
+        with patch('os.path.ismount', side_effect=self.mounted):
+            (self.root / 'indigo-stats').mkdir(exist_ok=True)
+            corrupt = self.root / 'indigo-stats' / 'corrupt.sqlite.manifest.json'
+            corrupt.write_text('bad json')
+            items = provider.list()
+            self.assertEqual(items, [])
+
+    def test_s3_provider_edge_cases(self):
+        with patch.dict(sys.modules, {'boto3': None}):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.S3Provider({'bucket': 'b', 'encryption': 'default'})
+            self.assertIn('S3 support is not installed', str(err.exception))
+
+        env = {
+            'BACKUP_S3_ACCESS_KEY_ID': 'key',
+            'BACKUP_S3_SECRET_ACCESS_KEY': 'secret',
+            'BACKUP_S3_KMS_KEY_ID': 'custom-kms-key',
+        }
+        with patch.dict(os.environ, env, clear=False), patch('boto3.client') as mock_boto:
+            mock_s3 = Mock()
+            mock_boto.return_value = mock_s3
+            provider = backups.S3Provider({'bucket': 'test-bucket', 'prefix': 'p', 'region': 'us-east-1', 'encryption': 'sse-kms'})
+            snapshot = db.backup()
+            data = backups.manifest(snapshot)
+            mock_s3.head_object.return_value = {'ContentLength': data['size'], 'Metadata': {'sha256': data['sha256']}}
+            provider.upload(snapshot, data)
+            upload_extra = mock_s3.upload_file.call_args[1]['ExtraArgs']
+            self.assertEqual(upload_extra['ServerSideEncryption'], 'aws:kms')
+            self.assertEqual(upload_extra['SSEKMSKeyId'], 'custom-kms-key')
+
+            mock_s3.head_object.return_value = {'ContentLength': 999999, 'Metadata': {'sha256': 'wrong'}}
+            with self.assertRaises(backups.BackupError) as err:
+                provider.upload(snapshot, data)
+            self.assertIn('S3 upload verification failed', str(err.exception))
+
+            mock_s3.get_paginator.return_value.paginate.return_value = [
+                {'Contents': [{'Key': 'p/bad.sqlite.manifest.json'}]}
+            ]
+            mock_s3.get_object.side_effect = RuntimeError('s3 error')
+            self.assertEqual(provider.list(), [])
+
+            target = db.DATA / 's3_download.sqlite'
+            item = backups.RemoteSnapshot('test.sqlite', 'sha', 10, 1, 'p/test.sqlite')
+            provider.download(item, target)
+            mock_s3.download_file.assert_called_once_with('test-bucket', 'p/test.sqlite', str(target))
+
+    def test_drive_provider_full(self):
+        with patch.dict(sys.modules, {'google.oauth2.credentials': None}):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.DriveProvider()
+            self.assertIn('Google Drive support is not installed', str(err.exception))
+
+        token_path = backups.token_file()
+        token_path.parent.mkdir(parents=True, exist_ok=True)
+        token_path.write_text('{"token": "old"}')
+
+        mock_creds = Mock()
+        mock_creds.expired = True
+        mock_creds.refresh_token = 'refresh-token'
+        mock_creds.valid = True
+        mock_creds.to_json.return_value = '{"token": "refreshed"}'
+
+        with patch('google.oauth2.credentials.Credentials.from_authorized_user_file', return_value=mock_creds), \
+             patch('google.auth.transport.requests.Request'), \
+             patch('googleapiclient.discovery.build') as mock_build:
+            mock_service = Mock()
+            mock_build.return_value = mock_service
+            mock_service.files.return_value.list.return_value.execute.return_value = {'files': []}
+            mock_service.files.return_value.create.return_value.execute.return_value = {'id': 'new-folder-id'}
+            dp = backups.DriveProvider()
+            mock_creds.refresh.assert_called_once()
+            self.assertIsNone(dp.folder)
+
+            # Upload auto-creates folder if None
+            path = db.backup()
+            data = backups.manifest(path)
+            mock_service.files.return_value.create.return_value.execute.side_effect = [
+                {'id': 'new-folder-id'},
+                {'id': 'snap-id', 'size': '999', 'appProperties': {'sha256': 'wrong'}},
+            ]
+            with self.assertRaises(backups.BackupError) as err:
+                dp.upload(path, data)
+            self.assertIn('Google Drive upload verification failed', str(err.exception))
+
+            dp.folder = None
+            self.assertEqual(dp.list(), [])
+
+            dp.folder = 'folder-id'
+            auth_err = Exception()
+            auth_err.resp = types.SimpleNamespace(status=401)
+            mock_service.files.return_value.list.return_value.execute.side_effect = None
+            mock_service.files.return_value.list.return_value.execute.return_value = {'files': [{'id': 'm1'}]}
+            mock_service.files.return_value.get_media.side_effect = auth_err
+            with self.assertRaises(backups.RelinkRequired):
+                dp.list()
+
+            mock_service.files.return_value.get_media.side_effect = RuntimeError('download error')
+            self.assertEqual(dp.list(), [])
+
+            # list() successful manifest parsing and snapshot match
+            valid_manifest = json.dumps({
+                'format': 1, 'filename': '20260921T120000Z.sqlite', 'sha256': 'a' * 64,
+                'size': 1234, 'created_at': 1000, 'schema_version': 1, 'application_version': '0.1.0'
+            }).encode()
+            mock_service.files.return_value.get_media.side_effect = None
+            with patch('googleapiclient.http.MediaIoBaseDownload') as mock_downloader:
+                def fake_init(fd, request):
+                    fd.write(valid_manifest)
+                    m = Mock()
+                    m.next_chunk.return_value = (None, True)
+                    return m
+                mock_downloader.side_effect = fake_init
+                dp._find = Mock(return_value=[{
+                    'id': 'snap-file-id',
+                    'appProperties': {'sha256': 'a' * 64, 'size': '1234'}
+                }])
+                listed = dp.list()
+                self.assertEqual(len(listed), 1)
+                self.assertEqual(listed[0].filename, '20260921T120000Z.sqlite')
+                self.assertEqual(listed[0].reference, 'snap-file-id')
+
+            mock_service.files.return_value.get_media.side_effect = None
+            item = backups.RemoteSnapshot('snap.sqlite', 'sha', 10, 1, 'ref-id')
+            target = db.DATA / 'drive_dl.sqlite'
+            with patch('googleapiclient.http.MediaIoBaseDownload') as mock_downloader:
+                mock_dl_inst = Mock()
+                mock_dl_inst.next_chunk.return_value = (None, True)
+                mock_downloader.return_value = mock_dl_inst
+                dp.download(item, target)
+                self.assertTrue(target.exists())
+
+            dp._find = Mock(return_value=[{'id': 'f1'}])
+            dp.delete(item)
+            self.assertEqual(mock_service.files.return_value.delete.return_value.execute.call_count, 2)
+
+    def test_provider_factory_and_readiness_and_probe(self):
+        with self.assertRaises(backups.BackupError) as err:
+            backups.provider({'provider': 'disabled'})
+        self.assertIn('Off-server backups are disabled', str(err.exception))
+
+        prov = backups.provider({'provider': 'filesystem'})
+        self.assertIsInstance(prov, backups.FilesystemProvider)
+
+        auth_err = Exception()
+        auth_err.resp = types.SimpleNamespace(status=401)
+        with patch('backend.backups.DriveProvider', side_effect=auth_err):
+            with self.assertRaises(backups.RelinkRequired):
+                backups.provider({'provider': 'google_drive'})
+
+        with patch('backend.backups.DriveProvider', side_effect=RuntimeError('generic drive error')):
+            with self.assertRaises(RuntimeError):
+                backups.provider({'provider': 'google_drive'})
+
+        with patch('backend.backups._secret', side_effect=backups.BackupError('secret error')):
+            r = backups.readiness({'provider': 's3'})
+            self.assertFalse(r['credentials_configured'])
+
+        auth_err = Exception()
+        auth_err.resp = types.SimpleNamespace(status=401)
+        mock_p = Mock()
+        mock_p.probe.side_effect = auth_err
+        with patch('backend.backups.provider', return_value=mock_p):
+            with self.assertRaises(backups.RelinkRequired):
+                backups.probe()
+
+        mock_p = Mock()
+        mock_p.probe.side_effect = RuntimeError('probe failure')
+        with patch('backend.backups.provider', return_value=mock_p):
+            with self.assertRaises(RuntimeError):
+                backups.probe()
+
+    def test_execute_disabled_and_start_async_and_remote_list(self):
+        backups.set_config({'provider': 'disabled'})
+        self.assertTrue(backups.run(wait=True))
+        with db.connect() as con:
+            success = con.execute("SELECT last_success FROM job_status WHERE name='offsite_backup'").fetchone()[0]
+            self.assertIsNotNone(success)
+
+        with patch('backend.backups._execute') as mock_exec:
+            self.assertTrue(backups.start_async())
+            time.sleep(0.1)
+            mock_exec.assert_called_once()
+
+        with patch('backend.backups._execute', side_effect=RuntimeError('execute error')):
+            self.assertTrue(backups.start_async())
+            time.sleep(0.1)
+
+        with patch('backend.backups.provider') as mock_prov:
+            mock_p = Mock()
+            mock_prov.return_value = mock_p
+            mock_p.list.return_value = [backups.RemoteSnapshot('snap.sqlite', 'sha', 1, 1, 'ref')]
+            res = backups.remote_list({'provider': 'filesystem'})
+            self.assertEqual(len(res), 1)
+
+    def test_fetch_integrity_failure(self):
+        snapshot = db.backup()
+        data = backups.manifest(snapshot)
+        item = backups.RemoteSnapshot(snapshot.name, data['sha256'], data['size'], data['created_at'], 'ref')
+        mock_p = Mock()
+        mock_p.list.return_value = [item]
+
+        def dummy_download(item, target):
+            target.write_bytes(snapshot.read_bytes())
+        mock_p.download.side_effect = dummy_download
+
+        mock_con = Mock()
+        mock_con.execute.return_value.fetchone.return_value = ('corrupt',)
+        with patch('backend.backups.provider', return_value=mock_p), \
+             patch('backend.backups.checksum', return_value=data['sha256']), \
+             patch('sqlite3.connect', return_value=mock_con):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.fetch(snapshot.name, {'provider': 'filesystem'})
+            self.assertIn('integrity check failed', str(err.exception))
+
+    def test_google_oauth_edge_cases(self):
+        with patch.dict(sys.modules, {'google_auth_oauthlib.flow': None}):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.google_authorization_url()
+            self.assertIn('Google Drive support is not installed', str(err.exception))
+
+        env = {
+            'BACKUP_GOOGLE_CLIENT_ID': 'id',
+            'BACKUP_GOOGLE_CLIENT_SECRET': 'secret',
+            'BACKUP_GOOGLE_CALLBACK_URI': 'http://insecure.example/cb',
+        }
+        with patch.dict(os.environ, env, clear=False):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.google_authorization_url()
+            self.assertIn('callback must use HTTPS', str(err.exception))
+
+        env['BACKUP_GOOGLE_CALLBACK_URI'] = 'https://secure.example/cb'
+        mock_flow = Mock()
+        mock_flow.authorization_url.return_value = ('https://accounts.google.com/test', 'state')
+        with patch.dict(os.environ, env, clear=False), \
+             patch('google_auth_oauthlib.flow.Flow.from_client_config', return_value=mock_flow):
+            backups._oauth_states['expired-state'] = ('verifier', 0)
+            backups._oauth_states['valid-state'] = ('verifier', time.time() + 1000)
+            backups.google_authorization_url()
+            self.assertNotIn('expired-state', backups._oauth_states)
+
+        with self.assertRaises(backups.BackupError) as err:
+            backups.google_callback('code', 'nonexistent-or-expired')
+        self.assertIn('session expired', str(err.exception))
+
+        backups._oauth_states['valid-state-2'] = ('verifier', time.time() + 1000)
+        with patch.dict(sys.modules, {'google_auth_oauthlib.flow': None}):
+            with self.assertRaises(backups.BackupError) as err:
+                backups.google_callback('code', 'valid-state-2')
+            self.assertIn('Google Drive support is not installed', str(err.exception))
 
 
 if __name__=='__main__': unittest.main()

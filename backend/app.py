@@ -5,7 +5,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from . import db,jobs,config,backups
@@ -115,7 +115,7 @@ def get_settings():
     }
 
 @app.post('/api/settings')
-def post_settings(data: dict):
+def post_settings(data: dict, background_tasks: BackgroundTasks):
     update = {}
     allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS']
     for env in allowed:
@@ -134,7 +134,7 @@ def post_settings(data: dict):
     if (merged.get('forecast_enabled') and 'latitude' in merged and 'longitude' in merged) and (
         'forecast_enabled' in update or 'latitude' in update or 'longitude' in update
     ):
-        asyncio.create_task(jobs.weather())
+        background_tasks.add_task(jobs.weather)
     return {'ok': True}
 
 @app.get('/api/latest')

@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from backend import db,jobs
 from backend.air import aqi,normalize,nowcast,environment_values
 
@@ -37,6 +37,31 @@ class AirTests(unittest.TestCase):
         self.assertEqual(nowcast([0,0]),0)
         self.assertAlmostEqual(nowcast([10,None,20]),12)
         self.assertEqual(nowcast([5]*12),5)
+
+    def test_normalize_errors_and_edge_cases(self):
+        self.assertIsNone(aqi(-1))
+        with patch('backend.air.BANDS', []):
+            self.assertIsNone(aqi(5.0))
+        with self.assertRaises(ValueError): normalize({}, {}, 123)
+        with self.assertRaises(ValueError): normalize('not-dict', {}, 123)
+        with self.assertRaises(ValueError): normalize({'SensorId': 'x'}, {'pm_method': 'unsupported'}, 123)
+        with self.assertRaises(ValueError): environment_values(70, 50, 'unknown')
+        from backend.air import environment_sql
+        with self.assertRaises(ValueError): environment_sql('unknown')
+        stale = normalize({'SensorId': 'x', 'DateTime': '2026/01/01T00:00:00Z'}, {}, 2000000000)
+        self.assertIn('device_clock_or_stale_source', stale['quality'])
+        bad_time = normalize({'SensorId': 'x', 'DateTime': 'invalid-date'}, {}, 123)
+        self.assertIn('invalid_device_time', bad_time['quality'])
+        single = normalize({'SensorId': 'x', 'pm2_5_cf_1': 10}, {}, 123)
+        self.assertIn('single_channel', single['quality'])
+        missing = normalize({'SensorId': 'x'}, {}, 123)
+        self.assertIn('missing_pm', missing['quality'])
+        epa_missing = normalize({'SensorId': 'x', 'pm2_5_cf_1': 10}, {'pm_method': 'epa2021'}, 123)
+        self.assertIn('correction_unavailable', epa_missing['quality'])
+        self.assertIsNone(epa_missing['pm25'])
+        epa_high = normalize({'SensorId': 'x', 'pm2_5_cf_1': 550, 'current_humidity': 50}, {'pm_method': 'epa2021'}, 123)
+        self.assertIn('outside_correction_range', epa_high['quality'])
+        self.assertIsNone(epa_high['pm25'])
 
 class DatabaseTests(unittest.TestCase):
     def setUp(self):
@@ -178,5 +203,92 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(response.headers['x-frame-options'],'DENY')
             self.assertIn("default-src 'self'",response.headers['content-security-policy'])
             self.assertEqual(client.get('/api/history?start=0&end=999999999999').status_code,400)
+
+    def test_backup_integrity_failure(self):
+        from contextlib import contextmanager
+        @contextmanager
+        def fake_connect():
+            yield Mock()
+        mock_target = Mock()
+        mock_target.execute.return_value.fetchone.return_value = ['corrupt']
+        with patch('backend.db.connect', side_effect=fake_connect), \
+             patch('backend.db.sqlite3.connect', return_value=mock_target):
+            with self.assertRaises(RuntimeError) as exc:
+                db.backup()
+            self.assertIn('integrity verification failed', str(exc.exception))
+        mock_target.close.assert_called_once()
+
+    def test_health_and_latest_with_reading(self):
+        import time
+        from fastapi.testclient import TestClient
+        from backend.app import app, APP_VERSION
+        with patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
+            h = client.get('/api/health')
+            self.assertEqual(h.status_code, 200)
+            self.assertEqual(h.json(), {'ok': True, 'version': APP_VERSION})
+            now = int(time.time())
+            with db.connect() as con:
+                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 75, 45, 80, 40, 350, 'cf1', '', 'purpleair')", (now,))
+            latest = client.get('/api/latest').json()
+            self.assertFalse(latest['stale'])
+            self.assertIsNotNone(latest['reading'])
+            self.assertTrue(latest['reading']['beyond_scale'])
+            self.assertEqual(latest['reading']['aqi'], 500)
+            self.assertEqual(latest['reading']['environment_mode'], 'purpleair')
+
+    def test_frontend_static_serving_and_404s(self):
+        from fastapi.testclient import TestClient
+        from backend.app import app
+        web_temp = tempfile.TemporaryDirectory()
+        web_path = Path(web_temp.name)
+        (web_path / 'index.html').write_text('<!doctype html><html><body>SPA</body></html>')
+        assets = web_path / 'assets'
+        assets.mkdir()
+        (assets / 'app.js').write_text('console.log(1);')
+        (web_path / 'icon.svg').write_text('<svg></svg>')
+        with patch('backend.app.WEB', web_path), patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
+            r_root = client.get('/')
+            self.assertEqual(r_root.status_code, 200)
+            self.assertIn('SPA', r_root.text)
+            r_file = client.get('/icon.svg')
+            self.assertEqual(r_file.status_code, 200)
+            r_spa = client.get('/overview')
+            self.assertEqual(r_spa.status_code, 200)
+            self.assertIn('SPA', r_spa.text)
+            self.assertEqual(client.get('/missing.png').status_code, 404)
+            self.assertEqual(client.get('/api/nonexistent').status_code, 404)
+        web_temp.cleanup()
+
+    def test_config_validation_branches(self):
+        from backend.config import validate
+        with self.assertRaises(ValueError): validate({'forecast_enabled': 'not-a-bool'})
+        with self.assertRaises(ValueError): validate({'latitude': 40.0})
+        with self.assertRaises(ValueError): validate({'longitude': -100.0})
+        with self.assertRaises(ValueError): validate({'sensor_host': '127.0.0.1'})
+        with self.assertRaises(ValueError): validate({'sensor_host': '8.8.8.8'})
+        with self.assertRaises(ValueError): validate({'sensor_host': '::1'})
+        with self.assertRaises(ValueError): validate({'latitude': 95.0, 'longitude': 0.0})
+        with self.assertRaises(ValueError): validate({'latitude': 0.0, 'longitude': 200.0})
+        with self.assertRaises(ValueError): validate({'latitude': float('nan'), 'longitude': 0.0})
+        with self.assertRaises(ValueError): validate({'pm_method': 'invalid'})
+        with self.assertRaises(ValueError): validate({'environment_mode': 'invalid'})
+        with self.assertRaises(ValueError): validate({'placement': 'invalid'})
+        with self.assertRaises(ValueError): validate({'units': 'invalid'})
+        with self.assertRaises(Exception): validate({'timezone': 'Invalid/Timezone_Name_X'})
+
+    def test_post_settings_branches(self):
+        from fastapi.testclient import TestClient
+        from backend.app import app
+        with patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
+            self.assertEqual(client.post('/api/settings', json={'FORECAST_LATITUDE': 'bad'}).status_code, 400)
+            self.assertEqual(client.post('/api/settings', json={'FORECAST_LATITUDE': '45.0'}).status_code, 400)
+            with patch('backend.jobs.weather') as mock_weather:
+                res = client.post('/api/settings', json={
+                    'FORECAST_ENABLED': 'true',
+                    'FORECAST_LATITUDE': '45.0',
+                    'FORECAST_LONGITUDE': '-122.0'
+                })
+                self.assertEqual(res.status_code, 200)
+                mock_weather.assert_called_once()
 
 if __name__=='__main__': unittest.main()
