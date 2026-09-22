@@ -14,6 +14,8 @@ The daily local SQLite snapshot and its integrity check remain the source of eve
 
 Snapshots include the private settings table and raw sensor metadata. Indigo Stats does **not** add client-side encryption in this release. Use provider/filesystem access controls and encryption at rest, keep destinations private, and protect all credentials. The System API and UI expose only configured/readiness flags, never bucket names, endpoints, paths, OAuth callback URLs, folder IDs, tokens, or remote object references.
 
+On Unraid, toggle **Advanced View** in the container template to expose pre-configured fields for the `/offsite` mount, Google Drive OAuth variables, and S3 access keys.
+
 ### S3 and compatible storage
 
 Choose S3 in System and enter the bucket, optional prefix/region, optional custom endpoint, and encryption mode. Custom endpoints must use HTTPS. Supply credentials through `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, and optional `BACKUP_S3_SESSION_TOKEN`, or the corresponding `_FILE` variables. For SSE-KMS, optionally supply `BACKUP_S3_KMS_KEY_ID` (or `_FILE`). Grant only bucket listing and get/put/delete access beneath the selected prefix. Provider-default encryption, SSE-S3, and SSE-KMS are supported. Indigo Stats records the SHA-256 in object metadata and verifies size and metadata after upload.
@@ -28,7 +30,7 @@ For step-by-step Google Cloud Console configuration and troubleshooting, see the
 
 ### Mounted filesystem
 
-Mount NFS, SMB/CIFS, SSHFS, or another filesystem on the host, then bind that already-mounted directory to `/offsite` read/write. The optional Compose line demonstrates the bind. The app never mounts network storage, stores share credentials, creates `/offsite` as a fallback, or changes host services. `/offsite` must be a distinct mount writable by PUID/PGID. Files go only beneath `/offsite/indigo-stats`, via a same-directory partial file, `fsync`, atomic rename, and full read-back checksum. Symlinks and traversal are rejected. The live `/data/indigo.sqlite` must remain on local storage.
+Mount NFS, SMB/CIFS, SSHFS, or another filesystem on the host, then bind that already-mounted directory to `/offsite` read/write. On Unraid, toggle **Advanced View** in the container template to configure the pre-labeled **Offsite backup mount** (`/offsite`) path. The optional Compose line demonstrates the bind. The app never mounts network storage, stores share credentials, creates `/offsite` as a fallback, or changes host services. `/offsite` must be a distinct mount writable by PUID/PGID. Files go only beneath `/offsite/indigo-stats`, via a same-directory partial file, `fsync`, atomic rename, and full read-back checksum. Symlinks and traversal are rejected. The live `/data/indigo.sqlite` must remain on local storage.
 
 Use **Test connection** for a destination probe and **Back up now** to queue asynchronous reconciliation. A second manual request returns conflict while a run is active. Mount/provider outages are reported with sanitized errors and retried hourly. Pruning starts only after a verified upload and deletes only Indigo Stats snapshot/manifest names; unrelated remote files are untouched.
 

@@ -92,6 +92,12 @@ Pass your OAuth credentials into your Indigo Stats container using environment v
 
 Alternatively, use the file-based variables: `BACKUP_GOOGLE_CLIENT_ID_FILE`, `BACKUP_GOOGLE_CLIENT_SECRET_FILE`, and `BACKUP_GOOGLE_CALLBACK_URI_FILE`.
 
+### Example: Unraid
+In Unraid, toggle **Advanced View** (switch in the top-right corner of the container edit page) to expose the pre-configured fields:
+- **Google OAuth Client ID**: `123456789-abc.apps.googleusercontent.com`
+- **Google OAuth Client Secret**: `GOCSPX-xxxxxxxxxxxxxxxx` (automatically masked)
+- **Google OAuth Callback URI**: `https://<your-host-or-domain>/api/backups/google/callback`
+
 ### Example: Docker Run
 ```sh
 docker run -d \

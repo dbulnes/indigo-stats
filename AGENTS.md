@@ -72,3 +72,11 @@ The CA template tracks `ghcr.io/dbulnes/indigo-stats:latest`. Publishing a new s
 An update recreates the container from the new image while retaining the existing `/data` mapping and template settings. Before schema-changing releases, document backup and rollback implications. Never delete appdata during an update.
 
 Application-only releases do not require editing or resubmitting the CA repository. When the Unraid template or repository metadata changes, update `indigo-stats-unraid`, run its `scripts/validate.py`, push it, and rerun CA Validate and Scan as required by the submission portal.
+
+### Unraid packaging synchronization
+Whenever new environment variables, secret files, path mounts, port mappings, or default behaviors are introduced in `indigo-stats` (such as offsite backup mounts `/offsite` or credentials `BACKUP_GOOGLE_*` and `BACKUP_S3_*`), the Unraid packaging repository ([dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid)) must be updated in tandem:
+1. Add `<Config>` entries in `templates/indigo-stats.xml` (use `Display="advanced"` for optional/expert settings, `Required="false"` for non-mandatory features, and `Mask="true"` for sensitive credentials).
+2. Update `<Date>` and `<Changes>` in `templates/indigo-stats.xml`.
+3. Update the configuration table in `README.md` of `indigo-stats-unraid`.
+4. Update `scripts/validate.py` in `indigo-stats-unraid` to enforce presence and masking of new variables.
+5. Run `python3 scripts/validate.py` and push to `indigo-stats-unraid`.

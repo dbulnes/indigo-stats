@@ -133,6 +133,11 @@ Supply your S3 credentials to the Indigo Stats container via environment variabl
 | `BACKUP_S3_SESSION_TOKEN` | *(Optional)* Session token for temporary credentials |
 | `BACKUP_S3_KMS_KEY_ID` | *(Optional)* KMS Key ID or ARN when using `sse-kms` encryption |
 
+### Unraid Example
+In Unraid, toggle **Advanced View** (switch in the top-right corner of the container edit page) to expose the pre-configured fields:
+- **S3 Access Key ID**: Enter your Access Key ID
+- **S3 Secret Access Key**: Enter your Secret Access Key (automatically masked)
+
 ### Docker Run Example
 ```sh
 docker run -d \
