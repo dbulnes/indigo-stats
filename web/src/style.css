@@ -39,6 +39,7 @@
 .hero-sub{font-size:11px;color:#8ba0b8;margin-top:auto}
 
 .sun-bar-wrap{margin-top:14px}
+.sun-header{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#7e93aa;margin-bottom:4px}
 .sun-bar{height:4px;background:#243244;border-radius:3px;position:relative;margin:8px 0}
 .sun-bar-progress{height:100%;background:linear-gradient(90deg,#e8995a,#f3cb7c,#8db8f9);border-radius:3px}
 .sun-bar-marker{position:absolute;top:-4px;width:12px;height:12px;background:#f3cb7c;border:2px solid #172130;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 6px #f3cb7c88}

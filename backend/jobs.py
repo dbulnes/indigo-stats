@@ -42,7 +42,7 @@ async def weather():
     if 'latitude' not in cfg or 'longitude' not in cfg:
         await asyncio.to_thread(db.status,'weather','Forecast location is not configured')
         return
-    common=dict(latitude=cfg['latitude'],longitude=cfg['longitude'],timezone='GMT',timeformat='unixtime')
+    common=dict(latitude=cfg['latitude'],longitude=cfg['longitude'],timezone=cfg.get('timezone','auto'),timeformat='unixtime')
     now=int(time.time())
     async with httpx.AsyncClient(timeout=30,trust_env=False) as client:
         for kind,url,params in [

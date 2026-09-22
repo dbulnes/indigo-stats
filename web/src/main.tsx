@@ -5,7 +5,7 @@ import {
   Activity, ArrowDownToLine, ArrowUpRight, ChevronLeft, ZoomIn, ZoomOut,
   CalendarDays, Check, ChevronRight, CircleHelp, Clock3, Database, Droplets,
   Gauge, History, LayoutDashboard, RefreshCw, Settings2, ShieldCheck,
-  Thermometer, Waves, Wind, Sun, Cloud
+  Thermometer, Waves, Wind, Sun, Cloud, Moon
 } from 'lucide-react'
 import { SystemSettings } from './SystemSettings'
 import { BackupSettings } from './BackupSettings'
@@ -124,6 +124,14 @@ function humidex(tempF: number | null | undefined, rh: number | null | undefined
   const e = (rh / 100) * 6.105 * Math.exp((17.27 * tC) / (237.7 + tC))
   const hC = tC + 0.5555 * (e - 10.0)
   return (hC * 9) / 5 + 32
+}
+
+function formatRemaining(sec: number) {
+  if (sec <= 0) return 'now'
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }
 
 const EMPTY: HistoryData = {
@@ -416,16 +424,48 @@ function App() {
   const nowTs = Date.now() / 1000
   const currentWeatherCond = weatherCondition(activeWeather.weather_code, isDaytime(nowTs))
   const WeatherIcon = currentWeatherCond.icon
-  const todayDaily = dailyForecast[0]
 
-  // Calculate sun progress for sunset/sunrise bar
-  const sunProgress = useMemo(() => {
-    if (!todayDaily?.sunrise || !todayDaily?.sunset) return null
-    const { sunrise, sunset } = todayDaily
-    if (nowTs < sunrise) return 0
-    if (nowTs > sunset) return 100
-    return Math.min(100, Math.max(0, ((nowTs - sunrise) / (sunset - sunrise)) * 100))
-  }, [todayDaily, nowTs])
+  // Find daily sun cycle (matching today's date in local tz)
+  const todayDateStr = useMemo(() => new Date(nowTs * 1000).toLocaleDateString('en-CA', { timeZone: tz }), [nowTs, tz])
+  const todayDaily = useMemo(() => {
+    if (!dailyForecast.length) return null
+    return dailyForecast.find(d => {
+      const day = new Date((d.sunrise ?? d.valid) * 1000).toLocaleDateString('en-CA', { timeZone: tz })
+      return day === todayDateStr
+    }) ?? dailyForecast[0]
+  }, [dailyForecast, todayDateStr, tz])
+
+  // Sun / Night cycle calculation
+  const sunInfo = useMemo(() => {
+    if (!dailyForecast.length) return null
+    const allSunrises = dailyForecast.map(d => d.sunrise).filter((s): s is number => s != null).sort((a, b) => a - b)
+    const allSunsets = dailyForecast.map(d => d.sunset).filter((s): s is number => s != null).sort((a, b) => a - b)
+
+    // Check if we are currently in daytime
+    const currentDay = dailyForecast.find(d => d.sunrise && d.sunset && nowTs >= d.sunrise && nowTs < d.sunset)
+    if (currentDay && currentDay.sunrise && currentDay.sunset) {
+      const progress = Math.min(100, Math.max(0, ((nowTs - currentDay.sunrise) / (currentDay.sunset - currentDay.sunrise)) * 100))
+      return {
+        isDay: true as const,
+        progress,
+        sunrise: currentDay.sunrise,
+        sunset: currentDay.sunset,
+        remainingSec: currentDay.sunset - nowTs,
+      }
+    }
+
+    // Nighttime: find most recent sunset and upcoming sunrise
+    const lastSunset = allSunsets.filter(s => s <= nowTs).pop() ?? todayDaily?.sunset
+    const nextSunrise = allSunrises.find(s => s > nowTs) ?? (todayDaily?.sunrise ? todayDaily.sunrise + 86400 : null)
+
+    return {
+      isDay: false as const,
+      progress: null,
+      lastSunset,
+      nextSunrise,
+      untilSunriseSec: nextSunrise ? Math.max(0, nextSunrise - nowTs) : null,
+    }
+  }, [dailyForecast, nowTs, todayDaily])
 
   return (
     <div className="shell">
@@ -540,16 +580,39 @@ function App() {
                   <span><Sun size={14} /> UV {fmt(activeWeather.uv_index, 0)} ({uvLabel(activeWeather.uv_index)})</span>
                 </div>
 
-                {todayDaily?.sunrise && todayDaily?.sunset ? (
+                {sunInfo ? (
                   <div className="sun-bar-wrap">
-                    <div className="sun-bar">
-                      <div className="sun-bar-progress" style={{ width: `${sunProgress ?? 50}%` }} />
-                      <div className="sun-bar-marker" style={{ left: `${sunProgress ?? 50}%` }} />
-                    </div>
-                    <div className="sun-times">
-                      <span>↑ {time(todayDaily.sunrise)} Sunrise</span>
-                      <span>↓ {time(todayDaily.sunset)} Sunset</span>
-                    </div>
+                    {sunInfo.isDay ? (
+                      <>
+                        <div className="sun-header">
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Sun size={12} style={{ color: '#f3cb7c' }} /> Daylight
+                          </span>
+                          <span>Sunset in {formatRemaining(sunInfo.remainingSec)}</span>
+                        </div>
+                        <div className="sun-bar">
+                          <div className="sun-bar-progress" style={{ width: `${sunInfo.progress}%` }} />
+                          <div className="sun-bar-marker" style={{ left: `${sunInfo.progress}%` }} />
+                        </div>
+                        <div className="sun-times">
+                          <span>↑ {time(sunInfo.sunrise)} Sunrise</span>
+                          <span>↓ {time(sunInfo.sunset)} Sunset</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="sun-header">
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <Moon size={12} style={{ color: '#8db8f9' }} /> Night
+                          </span>
+                          {sunInfo.untilSunriseSec != null && <span>Sunrise in {formatRemaining(sunInfo.untilSunriseSec)}</span>}
+                        </div>
+                        <div className="sun-times" style={{ marginTop: '6px' }}>
+                          <span>{sunInfo.lastSunset ? `Sunset was ${time(sunInfo.lastSunset)}` : 'Sun has set'}</span>
+                          <span>{sunInfo.nextSunrise ? `↑ ${time(sunInfo.nextSunrise)} Sunrise` : ''}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="hero-sub">Daily sunrise and sunset will appear once forecasts are refreshed.</div>
