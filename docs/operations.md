@@ -20,7 +20,9 @@ Choose S3 in System and enter the bucket, optional prefix/region, optional custo
 
 ### Google Drive
 
-Create a Google OAuth web client and supply `BACKUP_GOOGLE_CLIENT_ID`, `BACKUP_GOOGLE_CLIENT_SECRET`, and `BACKUP_GOOGLE_CALLBACK_URI` (or `_FILE`). The callback must exactly match the registered stable private HTTPS URL, except localhost may use HTTP. Select Google Drive, save, then use **Link Google Drive**. Authorization requests offline access, PKCE, CSRF state, and only the `drive.file` scope. Indigo Stats creates a visible app-owned “Indigo Stats Backups” folder and rediscovers it using private app properties. The refresh token is mode `0600` at `/data/secrets/google-drive-token.json`, outside SQLite and its snapshots. A revoked grant produces a relink-required error. Disaster recovery requires the same OAuth project followed by relinking.
+Create a Google OAuth web client and supply `BACKUP_GOOGLE_CLIENT_ID`, `BACKUP_GOOGLE_CLIENT_SECRET`, and `BACKUP_GOOGLE_CALLBACK_URI` (or `_FILE`). The callback must exactly match the registered stable private HTTPS URL, except localhost may use HTTP. Select Google Drive, save, then use **Link Google Drive** (which opens a dedicated popup modal for authorization and automatically refreshes on completion). Authorization requests offline access, PKCE, CSRF state, and only the `drive.file` scope. Indigo Stats creates a visible app-owned “Indigo Stats Backups” folder and rediscovers it using private app properties. The refresh token is mode `0600` at `/data/secrets/google-drive-token.json`, outside SQLite and its snapshots. A revoked grant produces a relink-required error. Disaster recovery requires the same OAuth project followed by relinking.
+
+For step-by-step Google Cloud Console configuration and troubleshooting, see the [Google Drive Backup Setup Guide](google-drive-backup-setup.md).
 
 ### Mounted filesystem
 

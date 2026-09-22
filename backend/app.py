@@ -93,7 +93,42 @@ def google_callback(code: str = Query(min_length=1), state: str = Query(min_leng
     try: backups.google_callback(code, state)
     except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
     except Exception: raise HTTPException(502, 'Google authorization failed') from None
-    return HTMLResponse('<!doctype html><title>Indigo Stats</title><p>Google Drive linked. You may close this window.</p>')
+    return HTMLResponse('''<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Indigo · Google Drive Linked</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #101723; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
+    .card { background: #1a2333; border: 1px solid #2d3748; border-radius: 12px; padding: 2rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    h1 { font-size: 1.25rem; margin: 0 0 0.75rem; color: #f8fafc; }
+    p { margin: 0 0 1.25rem; color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
+    a.btn { display: inline-block; background: #3b82f6; color: #fff; padding: 0.6rem 1.2rem; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 0.9rem; }
+    a.btn:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Google Drive linked</h1>
+    <p id="msg">Google Drive authorization was successful. This window will close automatically.</p>
+    <a href="/" class="btn" id="btn" style="display:none">Return to Indigo Stats</a>
+  </div>
+  <script>
+    try {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'indigo-google-auth-success' }, window.location.origin);
+        setTimeout(function() { window.close(); }, 1200);
+      } else {
+        document.getElementById('msg').textContent = 'Google Drive authorization was successful. You may return to the app.';
+        document.getElementById('btn').style.display = 'inline-block';
+      }
+    } catch (e) {
+      document.getElementById('btn').style.display = 'inline-block';
+    }
+  </script>
+</body>
+</html>''')
 
 @app.post('/api/backups/google/unlink')
 def google_unlink():

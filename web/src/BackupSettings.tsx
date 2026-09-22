@@ -31,7 +31,39 @@ export function BackupSettings() {
     const r=await fetch('/api/backups',{cache:'no-store'}); if(!r.ok) throw new Error('Unable to load backup status')
     const data=await r.json(); setStatus(data); setProvider(data.provider); setS3(x=>({...x,encryption:data.encryption||x.encryption}))
   }
-  useEffect(()=>{load().catch(e=>setMessage({text:e.message,type:'error'}))},[])
+  useEffect(()=>{
+    load().catch(e=>setMessage({text:e.message,type:'error'}))
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type === 'indigo-google-auth-success') {
+        load().catch(() => {})
+        setMessage({ text: 'Google Drive linked successfully.', type: 'success' })
+      }
+    }
+    window.addEventListener('message', handleAuthMessage)
+    return () => window.removeEventListener('message', handleAuthMessage)
+  },[])
+  const linkGoogle = () => {
+    if (!status?.oauth_configured) {
+      setMessage({ text: 'Google OAuth secrets are not configured in container environment.', type: 'error' })
+      return
+    }
+    setMessage({ text: '', type: '' })
+    const width = 520
+    const height = 680
+    const left = window.screenX + Math.max(0, Math.round((window.outerWidth - width) / 2))
+    const top = window.screenY + Math.max(0, Math.round((window.outerHeight - height) / 2))
+    const popup = window.open(
+      '/api/backups/google/connect',
+      'indigoGoogleOAuth',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    )
+    if (!popup) {
+      window.location.href = '/api/backups/google/connect'
+      return
+    }
+    popup.focus()
+  }
   const action=async(name:string,path:string,init?:RequestInit)=>{
     setBusy(name); setMessage({text:'',type:''})
     try { const r=await fetch(path,init); const data=await r.json().catch(()=>({})); if(!r.ok) throw new Error(data.detail||'Request failed'); await load(); setMessage({text:name==='run'?'Backup started. Status will update in the background.':'Backup destination updated.',type:'success'}) }
@@ -65,7 +97,7 @@ export function BackupSettings() {
     </div>}
     {provider==='google_drive' && <div>
       <p className="muted">OAuth setup: {status.oauth_configured?'configured':'not configured'} · account: {status.google_linked?'linked':'not linked'}.</p>
-      {status.google_linked ? <button className="secondary" onClick={()=>action('unlink','/api/backups/google/unlink',{method:'POST'})}>Unlink Google Drive</button> : <a className="secondary" href="/api/backups/google/connect" target="_blank" rel="noopener noreferrer">Link Google Drive</a>}
+      {status.google_linked ? <button className="secondary" onClick={()=>action('unlink','/api/backups/google/unlink',{method:'POST'})}>Unlink Google Drive</button> : <button className="secondary" onClick={linkGoogle}>Link Google Drive</button>}
     </div>}
     <div className="backup-actions"><button onClick={save} disabled={!!busy}>{busy==='save'?'Saving…':'Save destination'}</button><button className="secondary" onClick={()=>action('test','/api/backups/test',{method:'POST'})} disabled={!!busy||provider==='disabled'}>Test connection</button><button className="secondary" onClick={()=>action('run','/api/backups/run',{method:'POST'})} disabled={!!busy||provider==='disabled'}>Back up now</button></div>
     {message.text && <div className={`notice ${message.type}`}>{message.text}</div>}
