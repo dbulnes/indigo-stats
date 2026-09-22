@@ -55,7 +55,7 @@ Make small, coherent commits. Run checks appropriate to the changed files before
 
 ## Release process
 
-Run `sh scripts/release.sh <major|minor|patch|X.Y.Z>` from the repository root. The script bumps `web/package.json`, `web/package-lock.json`, and `backend/app.py` together, commits to `main`, pushes, waits for the `Build and test` workflow to pass (requires the GitHub CLI), then creates and pushes an annotated `vX.Y.Z` tag. Do not edit version files individually or move/reuse a published release tag.
+Run `sh scripts/release.sh <major|minor|patch|X.Y.Z>` from the repository root. The script bumps `web/package.json`, `web/package-lock.json`, and `backend/app.py` together, commits to `main`, pushes, waits for the `Build and test` workflow to pass (requires the GitHub CLI), creates and pushes an annotated `vX.Y.Z` tag, waits for the GHCR publish workflow to complete, and deploys to Unraid via `scripts/deploy-unraid.sh` (disable with `DEPLOY_UNRAID=0`). Do not edit version files individually or move/reuse a published release tag.
 
 To bump the version without releasing, run `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>` directly. Update release notes or user-facing documentation for material behavior, migration, configuration, or operational changes before releasing.
 
@@ -72,6 +72,12 @@ The CA template tracks `ghcr.io/dbulnes/indigo-stats:latest`. Publishing a new s
 An update recreates the container from the new image while retaining the existing `/data` mapping and template settings. Before schema-changing releases, document backup and rollback implications. Never delete appdata during an update.
 
 Application-only releases do not require editing or resubmitting the CA repository. When the Unraid template or repository metadata changes, update `indigo-stats-unraid`, run its `scripts/validate.py`, push it, and rerun CA Validate and Scan as required by the submission portal.
+
+### Automated Unraid deployment (`scripts/deploy-unraid.sh`)
+- `scripts/deploy-unraid.sh [CONTAINER_NAME]` handles exclusively the Unraid update portion (invoked by `scripts/release.sh` or standalone).
+- Resolves the `sshhomelab` alias dynamically from `~/.zshrc` (or `UNRAID_SSH`). Never commit real hostnames, IPs, or tailnet domains to git.
+- Executes `/usr/local/emhttp/plugins/dynamix.docker.manager/scripts/update_container <name>`, which pulls the new image, preserves XML template configurations and Tailscale hooks, recreates the container, prunes orphan images, and syncs the Unraid Web UI.
+- Validates remote container state and `/api/health`. Full runbook codified in `.agents/skills/unraid-deploy/SKILL.md`.
 
 ### Unraid packaging synchronization
 Whenever new environment variables, secret files, path mounts, port mappings, or default behaviors are introduced in `indigo-stats` (such as offsite backup mounts `/offsite` or credentials `BACKUP_GOOGLE_*` and `BACKUP_S3_*`), the Unraid packaging repository ([dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid)) must be updated in tandem:
