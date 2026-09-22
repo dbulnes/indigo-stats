@@ -4,6 +4,8 @@
 **/dist
 **/__pycache__
 .env*
+.coverage
+htmlcov
 private
 work
 data

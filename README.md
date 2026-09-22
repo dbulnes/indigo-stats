@@ -1,7 +1,7 @@
 # Indigo Stats
 
 [![Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml/badge.svg)](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](backend/tests)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dbulnes/indigo-stats/python-coverage-comment-action-data/endpoint.json)](https://github.com/dbulnes/indigo-stats/tree/python-coverage-comment-action-data)
 
 <p align="center">
   <img src="docs/screenshot_overview.png" alt="Indigo Stats Overview Dashboard" width="800"/>
