@@ -18,6 +18,8 @@ Snapshots include the private settings table and raw sensor metadata. Indigo Sta
 
 Choose S3 in System and enter the bucket, optional prefix/region, optional custom endpoint, and encryption mode. Custom endpoints must use HTTPS. Supply credentials through `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, and optional `BACKUP_S3_SESSION_TOKEN`, or the corresponding `_FILE` variables. For SSE-KMS, optionally supply `BACKUP_S3_KMS_KEY_ID` (or `_FILE`). Grant only bucket listing and get/put/delete access beneath the selected prefix. Provider-default encryption, SSE-S3, and SSE-KMS are supported. Indigo Stats records the SHA-256 in object metadata and verifies size and metadata after upload.
 
+For step-by-step setup, least-privilege IAM policies, and provider examples (AWS, Cloudflare R2, MinIO, Backblaze B2), see the [S3 Backup Setup Guide](s3-backup-setup.md).
+
 ### Google Drive
 
 Create a Google OAuth web client and supply `BACKUP_GOOGLE_CLIENT_ID`, `BACKUP_GOOGLE_CLIENT_SECRET`, and `BACKUP_GOOGLE_CALLBACK_URI` (or `_FILE`). The callback must exactly match the registered stable private HTTPS URL, except localhost may use HTTP. Select Google Drive, save, then use **Link Google Drive** (which opens a dedicated popup modal for authorization and automatically refreshes on completion). Authorization requests offline access, PKCE, CSRF state, and only the `drive.file` scope. Indigo Stats creates a visible app-owned “Indigo Stats Backups” folder and rediscovers it using private app properties. The refresh token is mode `0600` at `/data/secrets/google-drive-token.json`, outside SQLite and its snapshots. A revoked grant produces a relink-required error. Disaster recovery requires the same OAuth project followed by relinking.

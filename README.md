@@ -36,7 +36,7 @@ Use one Uvicorn worker: the application owns the scheduled collection jobs. The 
 
 The Unraid template publishes a trusted-LAN port. The optional Compose example binds to loopback for a host reverse proxy. There is no application login: restrict access to your trusted LAN/tailnet and never publish it directly to the internet.
 
-Off-server backup is optional and never places the live SQLite database on remote storage. The filesystem provider writes only beneath a distinct host-managed mount at `/offsite`; mount NFS, SMB/CIFS, or SSHFS on the host first and make it writable by the configured PUID/PGID. S3 credentials and Google OAuth client secrets are accepted only through environment or `_FILE` secrets. See [operations](docs/operations.md#off-server-backups) and the [Google Drive setup guide](docs/google-drive-backup-setup.md) for setup and recovery.
+Off-server backup is optional and never places the live SQLite database on remote storage. The filesystem provider writes only beneath a distinct host-managed mount at `/offsite`; mount NFS, SMB/CIFS, or SSHFS on the host first and make it writable by the configured PUID/PGID. S3 credentials and Google OAuth client secrets are accepted only through environment or `_FILE` secrets. See [operations](docs/operations.md#off-server-backups), the [Google Drive setup guide](docs/google-drive-backup-setup.md), and the [S3 setup guide](docs/s3-backup-setup.md) for setup and recovery.
 
 ## Local development
 
