@@ -102,30 +102,47 @@ def google_callback(code: str = Query(min_length=1), state: str = Query(min_leng
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; background: #101723; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
     .card { background: #1a2333; border: 1px solid #2d3748; border-radius: 12px; padding: 2rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .check { width: 44px; height: 44px; border-radius: 50%; background: #064e3b; color: #34d399; font-size: 24px; line-height: 44px; margin: 0 auto 1rem; font-weight: bold; }
     h1 { font-size: 1.25rem; margin: 0 0 0.75rem; color: #f8fafc; }
-    p { margin: 0 0 1.25rem; color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
-    a.btn { display: inline-block; background: #3b82f6; color: #fff; padding: 0.6rem 1.2rem; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 0.9rem; }
-    a.btn:hover { background: #2563eb; }
+    p { margin: 0 0 1.5rem; color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }
+    .btn { display: inline-block; background: #3b82f6; color: #fff; padding: 0.65rem 1.4rem; border-radius: 6px; border: none; font-weight: 500; font-size: 0.95rem; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: #2563eb; }
+    .link { color: #60a5fa; font-size: 0.85rem; text-decoration: none; }
+    .link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="card">
+    <div class="check">✓</div>
     <h1>Google Drive linked</h1>
-    <p id="msg">Google Drive authorization was successful. This window will close automatically.</p>
-    <a href="/" class="btn" id="btn" style="display:none">Return to Indigo Stats</a>
+    <p id="msg">Authorization was successful. You can close this window to return to Indigo Stats.</p>
+    <button type="button" class="btn" id="btn" onclick="done()">Close Window</button>
+    <div style="margin-top: 1rem;"><a href="/" class="link">Return to Indigo Stats</a></div>
   </div>
   <script>
-    try {
-      if (window.opener) {
-        window.opener.postMessage({ type: 'indigo-google-auth-success' }, window.location.origin);
-        setTimeout(function() { window.close(); }, 1200);
-      } else {
-        document.getElementById('msg').textContent = 'Google Drive authorization was successful. You may return to the app.';
-        document.getElementById('btn').style.display = 'inline-block';
-      }
-    } catch (e) {
-      document.getElementById('btn').style.display = 'inline-block';
+    function notifyOpener() {
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type: 'indigo-google-auth-success' }, '*');
+        }
+      } catch (e) {}
     }
+    function done() {
+      notifyOpener();
+      try {
+        window.open('', '_self', '');
+        window.close();
+      } catch (e) {}
+      setTimeout(function() {
+        if (!window.closed) {
+          window.location.href = '/';
+        }
+      }, 300);
+    }
+    notifyOpener();
+    setTimeout(function() {
+      try { window.close(); } catch (e) {}
+    }, 1000);
   </script>
 </body>
 </html>''')

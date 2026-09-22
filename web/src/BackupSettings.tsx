@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 type BackupStatus = {
   provider: 'disabled'|'filesystem'|'s3'|'google_drive'
@@ -27,6 +27,7 @@ export function BackupSettings() {
   const [s3,setS3]=useState({bucket:'',prefix:'indigo-stats',region:'',endpoint:'',encryption:'default'})
   const [busy,setBusy]=useState('')
   const [message,setMessage]=useState({text:'',type:''})
+  const popupTimerRef = useRef<number | null>(null)
   const load=async()=>{
     const r=await fetch('/api/backups',{cache:'no-store'}); if(!r.ok) throw new Error('Unable to load backup status')
     const data=await r.json(); setStatus(data); setProvider(data.provider); setS3(x=>({...x,encryption:data.encryption||x.encryption}))
@@ -41,7 +42,12 @@ export function BackupSettings() {
       }
     }
     window.addEventListener('message', handleAuthMessage)
-    return () => window.removeEventListener('message', handleAuthMessage)
+    return () => {
+      window.removeEventListener('message', handleAuthMessage)
+      if (popupTimerRef.current !== null) {
+        window.clearInterval(popupTimerRef.current)
+      }
+    }
   },[])
   const linkGoogle = () => {
     if (!status?.oauth_configured) {
@@ -63,6 +69,29 @@ export function BackupSettings() {
       return
     }
     popup.focus()
+    if (popupTimerRef.current !== null) {
+      window.clearInterval(popupTimerRef.current)
+    }
+    let checks = 0
+    popupTimerRef.current = window.setInterval(() => {
+      checks++
+      try {
+        if (!popup || popup.closed || checks > 300) {
+          if (popupTimerRef.current !== null) {
+            window.clearInterval(popupTimerRef.current)
+            popupTimerRef.current = null
+          }
+          if (!popup || popup.closed) {
+            load().catch(() => {})
+          }
+        }
+      } catch {
+        if (popupTimerRef.current !== null) {
+          window.clearInterval(popupTimerRef.current)
+          popupTimerRef.current = null
+        }
+      }
+    }, 1000)
   }
   const action=async(name:string,path:string,init?:RequestInit)=>{
     setBusy(name); setMessage({text:'',type:''})

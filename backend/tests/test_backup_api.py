@@ -61,6 +61,7 @@ class BackupApiTests(unittest.TestCase):
             res = self.client.get('/api/backups/google/callback?code=authcode&state=authstate')
             self.assertEqual(res.status_code, 200)
             self.assertIn('Google Drive linked', res.text)
+            self.assertIn('Close Window', res.text)
             mock_cb.assert_called_once_with('authcode', 'authstate')
 
         with patch.object(backups, 'google_callback', side_effect=backups.BackupError('expired session')):
