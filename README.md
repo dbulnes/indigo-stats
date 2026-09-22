@@ -2,23 +2,23 @@
 
 [Full report](https://htmlpreview.github.io/?https://github.com/dbulnes/indigo-stats/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
-| Name                                     |    Stmts |     Miss |    Cover |   Missing |
-|----------------------------------------- | -------: | -------: | -------: | --------: |
-| backend/\_\_init\_\_.py                  |        0 |        0 |     100% |           |
-| backend/air.py                           |       76 |        0 |     100% |           |
-| backend/app.py                           |      208 |        0 |     100% |           |
-| backend/backups.py                       |      734 |        0 |     100% |           |
-| backend/config.py                        |       52 |        0 |     100% |           |
-| backend/db.py                            |       80 |        0 |     100% |           |
-| backend/jobs.py                          |       96 |        0 |     100% |           |
-| backend/manage.py                        |       38 |        0 |     100% |           |
-| backend/tests/test\_backup\_api.py       |      166 |        0 |     100% |           |
-| backend/tests/test\_backup\_hardening.py |      231 |        0 |     100% |           |
-| backend/tests/test\_backups.py           |      528 |        0 |     100% |           |
-| backend/tests/test\_core.py              |      321 |        0 |     100% |           |
-| backend/tests/test\_jobs.py              |       94 |        0 |     100% |           |
-| backend/tests/test\_manage.py            |       69 |        0 |     100% |           |
-| **TOTAL**                                | **2693** |    **0** | **100%** |           |
+| Name                                     |    Stmts |     Miss |   Cover |   Missing |
+|----------------------------------------- | -------: | -------: | ------: | --------: |
+| backend/\_\_init\_\_.py                  |        0 |        0 |    100% |           |
+| backend/air.py                           |       76 |        0 |    100% |           |
+| backend/app.py                           |      210 |        1 |     99% |        82 |
+| backend/backups.py                       |      734 |        0 |    100% |           |
+| backend/config.py                        |       52 |        0 |    100% |           |
+| backend/db.py                            |       80 |        0 |    100% |           |
+| backend/jobs.py                          |       99 |        0 |    100% |           |
+| backend/manage.py                        |       38 |        0 |    100% |           |
+| backend/tests/test\_backup\_api.py       |      166 |        0 |    100% |           |
+| backend/tests/test\_backup\_hardening.py |      231 |        0 |    100% |           |
+| backend/tests/test\_backups.py           |      528 |        0 |    100% |           |
+| backend/tests/test\_core.py              |      322 |        0 |    100% |           |
+| backend/tests/test\_jobs.py              |       94 |        0 |    100% |           |
+| backend/tests/test\_manage.py            |       69 |        0 |    100% |           |
+| **TOTAL**                                | **2699** |    **1** | **99%** |           |
 
 
 ## Setup coverage badge
