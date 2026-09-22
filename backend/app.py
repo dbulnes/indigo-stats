@@ -14,7 +14,7 @@ from . import db,jobs,config,backups
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
-APP_VERSION = '0.6.8'
+APP_VERSION = '0.6.9'
 SCHEDULES = (
     ('sensor', jobs.collect, 60),
     ('weather', jobs.weather, 3600),
