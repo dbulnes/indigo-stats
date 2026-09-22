@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from . import db,jobs,config,backups
+from . import db,jobs,config,backups,astronomy
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
@@ -288,6 +288,29 @@ def forecast():
     for row in hourly:
         row['aqi']=aqi(row['pm25'])
     return {'points':hourly, 'daily':daily}
+
+@app.get('/api/astronomy')
+def astronomy_overview():
+    cfg = db.settings()
+    if 'latitude' not in cfg or 'longitude' not in cfg:
+        return {'available': False, 'reason': 'Forecast location is not configured in settings.'}
+    lat = float(cfg['latitude'])
+    lon = float(cfg['longitude'])
+    tz = cfg.get('timezone', 'UTC')
+
+    # Query latest forecast cloud cover if available for stargazing score
+    cloud_cover = None
+    try:
+        now = int(time.time())
+        with db.connect() as con:
+            row = con.execute('''SELECT cloud_cover FROM forecasts WHERE kind='weather' AND valid>=? AND cloud_cover IS NOT NULL
+                ORDER BY valid ASC LIMIT 1''', (now,)).fetchone()
+            if row and row['cloud_cover'] is not None:
+                cloud_cover = float(row['cloud_cover'])
+    except Exception:
+        pass
+
+    return astronomy.get_astronomy_overview(lat, lon, timezone_str=tz, cloud_cover=cloud_cover)
 
 @app.get('/api/export')
 def export(start:int=Query(ge=0),end:int=Query(ge=0)):

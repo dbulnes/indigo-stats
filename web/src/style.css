@@ -96,18 +96,101 @@
 .detail-item-value{font-size:16px;font-weight:500;color:#dce5f1;text-align:right}
 .detail-item-value small{font-size:11px;font-weight:400;color:#8c9eb4;margin-left:2px}
 
+
+/* Astronomy & Celestial Observatory Panel */
+.astro-panel{background:#172130;border:1px solid #263548;border-radius:12px;padding:18px 20px;margin-bottom:20px}
+.astro-panel-heading{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.astro-header-actions{display:flex;align-items:center;gap:10px}
+.stargazing-badge{display:flex;align-items:center;gap:6px;background:#131a24;border:1px solid #233142;border-radius:6px;padding:4px 10px;font-size:11px;color:#9bb0c7}
+.astro-live-pill{font-size:11px;padding:3px 8px;border-radius:12px;background:#1c2635;color:#8ba0b8;display:inline-flex;align-items:center;gap:5px}
+.astro-live-pill.visible{background:#142e2b;color:#56dfb2;border:1px solid #1e4741}
+.astro-live-pill .dot{width:6px;height:6px;border-radius:50%;background:#56dfb2;box-shadow:0 0 6px #56dfb2aa}
+.astro-live-pill .dot.off{background:#5a6d82;box-shadow:none}
+
+.astro-hybrid-grid{display:grid;grid-template-columns:1.15fr 1.15fr 1.3fr;gap:16px}
+.astro-card{background:#131c28;border:1px solid #223042;border-radius:10px;padding:14px 16px;display:flex;flex-direction:column}
+.card-subheading{font-size:10px;font-weight:600;letter-spacing:.6px;color:#7e93aa;display:flex;align-items:center;gap:6px;margin-bottom:12px;text-transform:uppercase}
+
+.moon-main-row{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.moon-visual-wrap{flex-shrink:0;display:grid;place-items:center}
+.moon-svg{width:100%;height:100%}
+.moon-headline-stats{display:flex;flex-direction:column;gap:3px}
+.moon-phase-title{display:flex;flex-direction:column}
+.moon-pct{font-size:24px;font-weight:600;color:#f3eedd;line-height:1.1}
+.moon-phase-name{font-size:13px;font-weight:500;color:#f3cb7c}
+.moon-sub-traits{display:flex;gap:10px;font-size:11px;color:#8496ab;margin-top:4px}
+.moon-sub-traits strong{color:#cbd7e7}
+.supermoon-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#f3cb7c;background:#2f2716;border:1px solid #57461e;padding:2px 6px;border-radius:4px;margin-top:4px;width:fit-content}
+
+.moon-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid #1c2738}
+.stat-box{background:#0f1620;border:1px solid #1c2838;border-radius:6px;padding:6px 8px;display:flex;flex-direction:column;gap:2px}
+.stat-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#728498}
+.stat-val{font-size:12px;font-weight:500;color:#dbe4ef}
+.moon-distance-foot{display:flex;justify-content:space-between;font-size:10px;color:#74879c;margin-top:8px;padding-top:6px;border-top:1px dashed #1c2738}
+
+.celestial-arc-wrap{display:flex;flex-direction:column;align-items:center;width:100%}
+.celestial-arc-header{display:flex;justify-content:space-between;width:100%;font-size:9px;letter-spacing:.5px;color:#6a7d93;margin-bottom:2px}
+.celestial-transit-sub{color:#f3cb7c;font-weight:500}
+.celestial-arc-svg{width:100%;max-width:280px;height:auto;margin:4px 0}
+@keyframes pulseMarker{0%{r:8;opacity:.35}50%{r:12;opacity:.15}100%{r:8;opacity:.35}}
+.moon-marker-pulse{animation:pulseMarker 3s infinite ease-in-out}
+.celestial-arc-tag{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:4px;padding:6px 10px;background:#0f1620;border:1px solid #1c2838;border-radius:6px;font-size:11px}
+.arc-tag-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px}
+.arc-tag-pill.active{background:#142e2b;color:#56dfb2}
+.arc-tag-pill.muted{background:#182230;color:#728498}
+.arc-coords{font-size:11px;color:#9bb0c7}
+.arc-coords strong{color:#e2ebf6}
+.twilight-strip{display:flex;justify-content:space-between;font-size:11px;color:#8295ab;margin-top:auto;padding-top:10px;border-top:1px solid #1c2738;width:100%}
+.twilight-strip strong{color:#c9d8ea}
+
+.planets-section{margin-bottom:12px}
+.section-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#6e8197;margin-bottom:6px;display:block}
+.planets-list{display:flex;flex-direction:column;gap:6px}
+.planet-pill{display:flex;align-items:center;justify-content:space-between;background:#0f1620;border:1px solid #1c2838;border-radius:6px;padding:6px 10px;font-size:11px}
+.planet-dot-wrap{display:flex;align-items:center;gap:6px;min-width:75px}
+.planet-color-dot{width:7px;height:7px;border-radius:50%}
+.planet-name{font-weight:500;color:#dce5f1;font-size:11px}
+.planet-mag{font-size:10px;color:#8da1b7;font-family:monospace}
+.planet-pos{font-size:11px;color:#56dfb2;font-weight:500}
+
+.events-section{margin-top:auto}
+.events-cards-wrap{display:flex;flex-direction:column;gap:6px}
+.astro-event-card{background:#0f1620;border:1px solid #1c2838;border-radius:6px;padding:8px 10px}
+.event-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.event-title{font-size:11px;font-weight:500;color:#dbe5f2;display:flex;align-items:center;gap:5px}
+.event-days{font-size:10px;font-weight:600;color:#f3cb7c;background:#2d2618;padding:1px 5px;border-radius:4px}
+.event-desc{font-size:10px;color:#7f92a7;line-height:1.35}
+.event-foot{display:flex;justify-content:space-between;align-items:center;margin-top:5px}
+.rating-pill{font-size:9px;font-weight:600;text-transform:uppercase;padding:2px 5px;border-radius:3px}
+.rating-pill.excellent{background:#142e2b;color:#56dfb2}
+.rating-pill.good{background:#152c38;color:#70d8c2}
+.rating-pill.fair{background:#2b2518;color:#f3cb7c}
+.rating-pill.poor{background:#2f1b1c;color:#f17676}
+.zhr-label{font-size:9px;color:#6f8298}
+
+.astro-panel.empty{display:flex;flex-direction:column;gap:12px}
+.astro-empty-content{display:flex;align-items:center;gap:16px;padding:14px;background:#131c28;border:1px dashed #28394e;border-radius:8px;color:#8ea1b6;font-size:12px}
+.muted-icon{color:#53677e;flex-shrink:0}
+.astro-setup-btn{margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#223144;border:1px solid #364b63;border-radius:6px;color:#cbd9eb;font-size:11px;font-weight:500;cursor:pointer}
+
 @media(max-width:1150px){
   .overview-bottom-grid{grid-template-columns:1fr 1fr}
+  .astro-hybrid-grid{grid-template-columns:1fr 1fr}
+  .planets-events-card{grid-column:span 2}
 }
 @media(max-width:800px){
   .hero-grid{grid-template-columns:1fr}
   .overview-bottom-grid{grid-template-columns:1fr}
   .backup-health,.backup-fields{grid-template-columns:1fr}
   .hero-temp{font-size:44px}
+  .astro-hybrid-grid{grid-template-columns:1fr}
+  .planets-events-card{grid-column:span 1}
 }
 @media(max-width:450px){
   .hero-temp{font-size:38px}
   .hourly-item{min-width:56px;padding:8px 4px}
+  .moon-main-row{flex-direction:column;text-align:center}
+  .moon-sub-traits{justify-content:center}
 }
 
 /* Modern observatory visual system */

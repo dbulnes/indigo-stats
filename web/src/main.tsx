@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 const SystemSettings = React.lazy(() => import('./SystemSettings').then(m => ({ default: m.SystemSettings })))
 const BackupSettings = React.lazy(() => import('./BackupSettings').then(m => ({ default: m.BackupSettings })))
+import { AstronomyPanel, type AstronomyData } from './AstronomyPanel'
 import { weatherCondition, uvLabel, toC, toKmh } from './weather'
 import './style.css'
 
@@ -157,6 +158,7 @@ function App() {
   const [previous, setPrevious] = useState<HistoryData>(EMPTY)
   const [forecast, setForecast] = useState<Forecast[]>([])
   const [dailyForecast, setDailyForecast] = useState<Forecast[]>([])
+  const [astronomy, setAstronomy] = useState<AstronomyData | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [tick, setTick] = useState(0)
@@ -202,16 +204,18 @@ function App() {
       get<Status>('/api/status', ctrl.signal),
       get<HistoryData>(`/api/history?${params}`, ctrl.signal),
       get<{ points: Forecast[]; daily?: Forecast[] }>('/api/forecast', ctrl.signal),
+      get<AstronomyData>('/api/astronomy', ctrl.signal).catch(() => ({ available: false })),
       comparison
         ? get<HistoryData>(`/api/history?start=${Math.max(0, start - (end - start))}&end=${start}&step=60${environmentMode ? `&environment=${environmentMode}` : ''}`, ctrl.signal)
         : Promise.resolve(EMPTY),
     ])
-      .then(([l, s, h, f, p]) => {
+      .then(([l, s, h, f, astro, p]) => {
         setLatest(l)
         setStatus(s)
         setHistory(h)
         setForecast(f.points)
         setDailyForecast(f.daily || [])
+        setAstronomy(astro)
         setPrevious(p)
       })
       .catch(e => {
@@ -746,6 +750,15 @@ function App() {
                 })}
               </div>
             </section>
+
+            {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
+            <AstronomyPanel
+              data={astronomy}
+              loading={loading}
+              timezone={tz}
+              units={units}
+              onConfigureClick={() => setTab('System')}
+            />
 
             {/* Bottom 3-Column Grid: 10-Day Forecast, 24h PM2.5 Trend, Weather Details */}
             <section className="overview-bottom-grid">

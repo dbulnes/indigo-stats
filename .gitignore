@@ -3,7 +3,7 @@
 !.env.example
 *.local
 private/
-node_modules/
+node_modules
 dist/
 .venv/
 __pycache__/
