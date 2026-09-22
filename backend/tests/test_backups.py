@@ -440,8 +440,9 @@ class BackupTests(unittest.TestCase):
         backups.set_config({'provider': 'disabled'})
         self.assertTrue(backups.run(wait=True))
         with db.connect() as con:
-            success = con.execute("SELECT last_success FROM job_status WHERE name='offsite_backup'").fetchone()[0]
-            self.assertIsNotNone(success)
+            row = con.execute("SELECT last_success FROM job_status WHERE name='offsite_backup'").fetchone()
+            self.assertTrue(row is None or row[0] is None)
+        self.assertIsNone(backups.public_status()['last_success'])
 
         with patch('backend.backups._execute') as mock_exec:
             self.assertTrue(backups.start_async())

@@ -79,7 +79,7 @@ export function BackupSettings() {
     <div className="backup-health">
       <div><strong>Local snapshots</strong><span>Daily · latest {status.local_retention} retained</span></div>
       <div><strong>Off-server copies</strong><span>{status.enabled ? `${status.provider.replace('_',' ')} · latest ${status.remote_retention} completed retained` : 'Disabled'}</span></div>
-      <div><strong>Last remote success</strong><span>{when(status.last_success)}</span></div>
+      <div><strong>Last remote success</strong><span>{status.enabled ? when(status.last_success) : 'Disabled'}</span></div>
     </div>
     {status.error && <div className="notice error">{status.error}</div>}
     <div className="form-group"><label>Destination</label><select value={provider} onChange={e=>setProvider(e.target.value as BackupStatus['provider'])}>

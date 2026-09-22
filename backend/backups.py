@@ -442,6 +442,8 @@ def public_status() -> dict[str, Any]:
     with db.connect() as con:
         row = con.execute("SELECT * FROM job_status WHERE name='offsite_backup'").fetchone()
     status = dict(row) if row else {'last_attempt': None, 'last_success': None, 'error': None}
+    if kind == 'disabled':
+        status['last_success'] = None
     configured = {}
     if kind == 's3':
         configured = {key + '_configured': bool(cfg.get(key)) for key in ('bucket', 'prefix', 'region', 'endpoint')}
@@ -473,7 +475,7 @@ def _execute() -> None:
     try:
         cfg = _config()
         if cfg.get('provider') == 'disabled':
-            db.status('offsite_backup', success=True); return
+            return
         dest = fingerprint(cfg); remote = provider(cfg); remote.probe()
         complete = {item.filename: item for item in remote.list()}; uploaded = False
         local = sorted((db.DATA / 'backups').glob('*.sqlite'), reverse=True)
