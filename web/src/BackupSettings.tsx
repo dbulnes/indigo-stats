@@ -28,22 +28,32 @@ export function BackupSettings() {
   const [busy,setBusy]=useState('')
   const [message,setMessage]=useState({text:'',type:''})
   const popupTimerRef = useRef<number | null>(null)
-  const load=async()=>{
+  const load=async(keepSelection=false)=>{
     const r=await fetch('/api/backups',{cache:'no-store'}); if(!r.ok) throw new Error('Unable to load backup status')
-    const data=await r.json(); setStatus(data); setProvider(data.provider); setS3(x=>({...x,encryption:data.encryption||x.encryption}))
+    const data:BackupStatus=await r.json(); setStatus(data)
+    if (!keepSelection) setProvider(data.provider)
+    setS3(x=>({...x,encryption:data.encryption||x.encryption}))
+    return data
   }
   useEffect(()=>{
     load().catch(e=>setMessage({text:e.message,type:'error'}))
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return
       if (event.data?.type === 'indigo-google-auth-success') {
-        load().catch(() => {})
+        load(true).catch(() => {})
         setMessage({ text: 'Google Drive linked successfully.', type: 'success' })
       }
     }
+    const handleFocus = () => {
+      load(true).catch(() => {})
+    }
     window.addEventListener('message', handleAuthMessage)
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleFocus)
     return () => {
       window.removeEventListener('message', handleAuthMessage)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleFocus)
       if (popupTimerRef.current !== null) {
         window.clearInterval(popupTimerRef.current)
       }
@@ -82,7 +92,11 @@ export function BackupSettings() {
             popupTimerRef.current = null
           }
           if (!popup || popup.closed) {
-            load().catch(() => {})
+            load(true).then(data => {
+              if (data?.google_linked) {
+                setMessage({ text: 'Google Drive linked successfully.', type: 'success' })
+              }
+            }).catch(() => {})
           }
         }
       } catch {
