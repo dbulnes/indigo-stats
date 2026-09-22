@@ -88,7 +88,7 @@ export function SystemSettings() {
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', 'X-Indigo-Request':'1'},
         body: JSON.stringify(settings)
       })
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to save')

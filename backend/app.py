@@ -5,8 +5,8 @@ import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
-from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse, HTMLResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from . import db,jobs,config,backups
 from .air import aqi,nowcast,environment_values,environment_sql
@@ -32,6 +32,40 @@ async def lifespan(app):
     with db.connect() as con: con.execute('PRAGMA wal_checkpoint(TRUNCATE)')
 
 app=FastAPI(title='Indigo Stats',lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
+
+GOOGLE_CALLBACK_SCRIPT = '''
+function notifyOpener() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.postMessage({ type: 'indigo-google-auth-success' }, window.location.origin);
+  }
+}
+function finishGoogleLink() {
+  notifyOpener();
+  window.close();
+  window.setTimeout(function () {
+    if (!window.closed) window.location.href = '/';
+  }, 300);
+}
+document.getElementById('btn').addEventListener('click', finishGoogleLink);
+notifyOpener();
+window.setTimeout(function () { window.close(); }, 1000);
+'''
+
+
+def require_browser_mutation(x_indigo_request: str | None = Header(default=None)):
+    # A custom header makes state changes unavailable to cross-origin HTML forms.
+    if x_indigo_request != '1':
+        raise HTTPException(403, 'State-changing requests require the Indigo Stats UI')
+
+
+def require_same_origin_navigation(request: Request):
+    site = request.headers.get('sec-fetch-site')
+    if site and site not in ('same-origin', 'none'):
+        raise HTTPException(403, 'Cross-origin navigation is not allowed')
+    origin = request.headers.get('origin')
+    expected = str(request.base_url).rstrip('/')
+    if origin and origin.rstrip('/') != expected:
+        raise HTTPException(403, 'Cross-origin navigation is not allowed')
 
 @app.middleware('http')
 async def headers(request,call_next):
@@ -66,31 +100,35 @@ def backup_status():
     return backups.public_status()
 
 @app.put('/api/backups')
-def configure_backups(data: dict):
+def configure_backups(data: dict, _=Depends(require_browser_mutation)):
     try: backups.set_config(data)
+    except backups.BackupBusy as exc: raise HTTPException(409, str(exc)) from None
     except ValueError as exc: raise HTTPException(400, str(exc)) from None
     return backups.public_status()
 
 @app.post('/api/backups/test')
-def test_backup_destination():
+def test_backup_destination(_=Depends(require_browser_mutation)):
     try: backups.probe()
     except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
     except Exception: raise HTTPException(502, 'Destination probe failed') from None
     return {'ok': True}
 
 @app.post('/api/backups/run', status_code=202)
-def run_backup_now():
+def run_backup_now(_=Depends(require_browser_mutation)):
     if not backups.start_async(): raise HTTPException(409, 'An off-server backup is already running')
     return {'accepted': True}
 
 @app.get('/api/backups/google/connect')
-def google_connect():
+def google_connect(request: Request):
+    require_same_origin_navigation(request)
     try: return RedirectResponse(backups.google_authorization_url(), status_code=302)
     except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
 
 @app.get('/api/backups/google/callback')
-def google_callback(code: str = Query(min_length=1), state: str = Query(min_length=1)):
+def google_callback(code: str = Query(min_length=1, max_length=4096),
+                    state: str = Query(min_length=1, max_length=256)):
     try: backups.google_callback(code, state)
+    except backups.BackupBusy as exc: raise HTTPException(409, str(exc)) from None
     except backups.BackupError as exc: raise HTTPException(400, str(exc)) from None
     except Exception: raise HTTPException(502, 'Google authorization failed') from None
     return HTMLResponse('''<!doctype html>
@@ -116,40 +154,21 @@ def google_callback(code: str = Query(min_length=1), state: str = Query(min_leng
     <div class="check">✓</div>
     <h1>Google Drive linked</h1>
     <p id="msg">Authorization was successful. You can close this window to return to Indigo Stats.</p>
-    <button type="button" class="btn" id="btn" onclick="done()">Close Window</button>
+    <button type="button" class="btn" id="btn">Close Window</button>
     <div style="margin-top: 1rem;"><a href="/" class="link">Return to Indigo Stats</a></div>
   </div>
-  <script>
-    function notifyOpener() {
-      try {
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage({ type: 'indigo-google-auth-success' }, '*');
-        }
-      } catch (e) {}
-    }
-    function done() {
-      notifyOpener();
-      try {
-        window.open('', '_self', '');
-        window.close();
-      } catch (e) {}
-      setTimeout(function() {
-        if (!window.closed) {
-          window.location.href = '/';
-        }
-      }, 300);
-    }
-    notifyOpener();
-    setTimeout(function() {
-      try { window.close(); } catch (e) {}
-    }, 1000);
-  </script>
+  <script src="/api/backups/google/callback-complete.js"></script>
 </body>
 </html>''')
 
+@app.get('/api/backups/google/callback-complete.js')
+def google_callback_script():
+    return Response(GOOGLE_CALLBACK_SCRIPT, media_type='application/javascript')
+
 @app.post('/api/backups/google/unlink')
-def google_unlink():
-    backups.google_unlink()
+def google_unlink(_=Depends(require_browser_mutation)):
+    try: backups.google_unlink()
+    except backups.BackupBusy as exc: raise HTTPException(409, str(exc)) from None
     return {'ok': True}
 
 
@@ -167,7 +186,8 @@ def get_settings():
     }
 
 @app.post('/api/settings')
-def post_settings(data: dict, background_tasks: BackgroundTasks):
+def post_settings(data: dict, background_tasks: BackgroundTasks,
+                  _=Depends(require_browser_mutation)):
     update = {}
     allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS']
     for env in allowed:

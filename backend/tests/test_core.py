@@ -88,6 +88,40 @@ class DatabaseTests(unittest.TestCase):
         db.status('example',success=True); db.status('example','temporary failure')
         with db.connect() as con: row=con.execute("SELECT last_success,error FROM job_status WHERE name='example'").fetchone()
         self.assertIsNotNone(row['last_success']); self.assertEqual(row['error'],'temporary failure')
+    def test_local_backup_is_published_only_after_verification(self):
+        real_replace=db.os.replace
+        observed=[]
+        def publish(source,target):
+            source=Path(source); target=Path(target)
+            observed.append((source.name,target.name))
+            self.assertTrue(source.name.endswith('.partial'))
+            self.assertEqual(list(target.parent.glob('*.sqlite')),[])
+            return real_replace(source,target)
+        with patch('backend.db.os.replace',side_effect=publish):
+            snapshot=db.backup()
+        self.assertEqual(observed[0][1],snapshot.name)
+        self.assertTrue(snapshot.exists())
+        self.assertEqual(list(snapshot.parent.glob('*.partial')),[])
+    def test_migration_version_advances_in_schema_transaction(self):
+        import sqlite3
+        migration=db.DATA/'migration.sql'
+        migration.write_text('BEGIN IMMEDIATE;\nCREATE TABLE sample (id INTEGER);\nCOMMIT;\n')
+        database=db.DATA/'migration-test.sqlite'
+        with sqlite3.connect(database) as con:
+            con.executescript(db._versioned_migration(migration,7))
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],7)
+            self.assertIsNotNone(con.execute("SELECT name FROM sqlite_master WHERE name='sample'").fetchone())
+        broken=db.DATA/'broken.sql'
+        broken.write_text('BEGIN IMMEDIATE;\nCREATE TABLE partial (id INTEGER);\nSELECT missing FROM nowhere;\nCOMMIT;\n')
+        with sqlite3.connect(database) as con:
+            with self.assertRaises(sqlite3.OperationalError): con.executescript(db._versioned_migration(broken,8))
+            con.rollback()
+            self.assertEqual(con.execute('PRAGMA user_version').fetchone()[0],7)
+            self.assertIsNone(con.execute("SELECT name FROM sqlite_master WHERE name='partial'").fetchone())
+        missing_commit=db.DATA/'missing-commit.sql'
+        missing_commit.write_text('BEGIN IMMEDIATE;\nSELECT 1;\n')
+        with self.assertRaisesRegex(RuntimeError,'must end with COMMIT'):
+            db._versioned_migration(missing_commit,8)
     def test_export_pages_every_row_and_escapes_formulas(self):
         from fastapi.testclient import TestClient
         from backend.app import app
@@ -171,10 +205,11 @@ class DatabaseTests(unittest.TestCase):
         with patch.dict('os.environ',{'DISABLE_JOBS':'1'}),TestClient(app) as client:
             r=client.get('/api/settings')
             self.assertEqual(r.json()['UNITS'],'imperial')
-            res=client.post('/api/settings',json={'UNITS':'metric'})
+            headers={'X-Indigo-Request':'1'}
+            res=client.post('/api/settings',json={'UNITS':'metric'},headers=headers)
             self.assertEqual(res.status_code,200)
             self.assertEqual(client.get('/api/settings').json()['UNITS'],'metric')
-            bad=client.post('/api/settings',json={'UNITS':'kelvin'})
+            bad=client.post('/api/settings',json={'UNITS':'kelvin'},headers=headers)
             self.assertEqual(bad.status_code,400)
             import time
             now=int(time.time())//3600*3600
@@ -203,6 +238,7 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(response.headers['x-frame-options'],'DENY')
             self.assertIn("default-src 'self'",response.headers['content-security-policy'])
             self.assertEqual(client.get('/api/history?start=0&end=999999999999').status_code,400)
+            self.assertEqual(client.post('/api/settings',json={'UNITS':'metric'}).status_code,403)
 
     def test_backup_integrity_failure(self):
         from contextlib import contextmanager
@@ -280,6 +316,7 @@ class DatabaseTests(unittest.TestCase):
         from fastapi.testclient import TestClient
         from backend.app import app
         with patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
+            client.headers.update({'X-Indigo-Request': '1'})
             self.assertEqual(client.post('/api/settings', json={'FORECAST_LATITUDE': 'bad'}).status_code, 400)
             self.assertEqual(client.post('/api/settings', json={'FORECAST_LATITUDE': '45.0'}).status_code, 400)
             with patch('backend.jobs.weather') as mock_weather:

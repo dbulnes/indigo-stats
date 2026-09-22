@@ -1,8 +1,11 @@
+import io
+import hashlib
 import json
 import os
 import sys
 import tempfile
 import time
+import threading
 import types
 import unittest
 from pathlib import Path
@@ -18,8 +21,10 @@ class BackupTests(unittest.TestCase):
         self.data_patch=patch.object(db,'DATA',Path(self.data_tmp.name)); self.data_patch.start()
         db.initialize()
         self.root=Path(self.offsite_tmp.name)
+        backups._oauth_states.clear()
 
     def tearDown(self):
+        backups._oauth_states.clear()
         self.data_patch.stop(); self.offsite_tmp.cleanup(); self.data_tmp.cleanup()
 
     def mounted(self, path):
@@ -27,6 +32,7 @@ class BackupTests(unittest.TestCase):
 
     def test_config_validation_and_public_status_are_redacted(self):
         with self.assertRaises(ValueError): backups.validate_config({'provider':'s3','bucket':'x','endpoint':'http://private.example'})
+        with self.assertRaises(ValueError): backups.validate_config({'provider':'s3','bucket':'x','endpoint':'https://private.example/?secret=1'})
         cfg=backups.set_config({'provider':'s3','bucket':'private-bucket','prefix':'private-prefix','region':'west','endpoint':'https://private.example','encryption':'sse-s3'})
         self.assertNotIn('private-bucket',json.dumps(backups.public_status()))
         self.assertNotIn('private.example',json.dumps(backups.public_status()))
@@ -133,12 +139,30 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(backups.checksum(db.DATA/'indigo.sqlite'),live_before)
         self.assertFalse((db.DATA/'recovery'/path.name).exists())
 
+    def test_fetch_cleans_database_when_manifest_publication_fails(self):
+        path=db.backup(); data=backups.manifest(path)
+        item=backups.RemoteSnapshot(path.name,data['sha256'],data['size'],data['created_at'],'remote')
+        remote=Mock(); remote.list.return_value=[item]
+        remote.download.side_effect=lambda _item,target: target.write_bytes(path.read_bytes())
+        real_link=os.link
+        def publish(source,target,**kwargs):
+            if str(target).endswith('.manifest.json'): raise OSError('disk failure')
+            return real_link(source,target,**kwargs)
+        with patch.object(backups,'provider',return_value=remote),patch('backend.backups.os.link',side_effect=publish):
+            with self.assertRaises(OSError): backups.fetch(path.name,{'provider':'filesystem'})
+        self.assertFalse((db.DATA/'recovery'/path.name).exists())
+        self.assertFalse((db.DATA/'recovery'/(path.name+'.manifest.json')).exists())
+
     def test_s3_upload_is_manifest_last_with_https_endpoint_and_sse(self):
         path=db.backup(); data=backups.manifest(path); events=[]
         client=Mock()
         client.upload_file.side_effect=lambda *a,**k:events.append(('database',a,k))
-        client.head_object.return_value={'ContentLength':data['size'],'Metadata':{'sha256':data['sha256']}}
+        client.head_object.return_value={'ContentLength':data['size'],'Metadata':{'sha256':data['sha256']},'ServerSideEncryption':'AES256'}
         client.put_object.side_effect=lambda **k:events.append(('manifest',(),k))
+        client.get_object.side_effect=[
+            {'Body':io.BytesIO(path.read_bytes())},
+            {'Body':io.BytesIO(backups._manifest_bytes(data))},
+        ]
         module=types.SimpleNamespace(client=Mock(return_value=client))
         cfg={'provider':'s3','bucket':'private','prefix':'indigo','region':'us-west-2','endpoint':'https://objects.example','encryption':'sse-s3'}
         with patch.dict(sys.modules,{'boto3':module}),patch.dict(os.environ,{'BACKUP_S3_ACCESS_KEY_ID':'key','BACKUP_S3_SECRET_ACCESS_KEY':'secret'},clear=False):
@@ -147,12 +171,32 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(module.client.call_args.kwargs['endpoint_url'],'https://objects.example')
         self.assertEqual(events[0][2]['ExtraArgs']['ServerSideEncryption'],'AES256')
         self.assertEqual(events[0][2]['ExtraArgs']['Metadata']['sha256'],data['sha256'])
+        self.assertEqual(events[0][2]['ExtraArgs']['ChecksumAlgorithm'],'SHA256')
+
+    def test_s3_rejects_corrupt_readback_before_manifest_publication(self):
+        path = db.backup()
+        data = backups.manifest(path)
+        client = Mock()
+        client.head_object.return_value = {
+            'ContentLength': data['size'],
+            'Metadata': {'sha256': data['sha256']},
+        }
+        client.get_object.return_value = {'Body': io.BytesIO(b'corrupt')}
+        module = types.SimpleNamespace(client=Mock(return_value=client))
+        cfg = {'bucket': 'bucket', 'prefix': 'p', 'encryption': 'default'}
+        env = {'BACKUP_S3_ACCESS_KEY_ID': 'key', 'BACKUP_S3_SECRET_ACCESS_KEY': 'secret'}
+        with patch.dict(sys.modules, {'boto3': module}), patch.dict(os.environ, env, clear=False):
+            provider = backups.S3Provider(cfg)
+            with self.assertRaises(backups.BackupError):
+                provider.upload(path, data)
+        client.put_object.assert_not_called()
 
     def test_s3_listing_ignores_incomplete_objects_and_deletes_only_pair(self):
         name='20260921T120000Z.sqlite'; payload=json.dumps({'format':1,'filename':name,'size':9,'created_at':1,'schema_version':6,'application_version':'x','sha256':'b'*64}).encode()
         client=Mock(); paginator=Mock(); paginator.paginate.return_value=[{'Contents':[{'Key':'p/'+name+'.manifest.json'},{'Key':'p/unrelated.txt'}]}]
-        client.get_paginator.return_value=paginator; client.get_object.return_value={'Body':types.SimpleNamespace(read=lambda:payload)}
+        client.get_paginator.return_value=paginator; client.get_object.side_effect=lambda **_: {'Body':io.BytesIO(payload)}
         client.head_object.return_value={'ContentLength':9,'Metadata':{'sha256':'b'*64}}
+        client.delete_objects.return_value={}
         module=types.SimpleNamespace(client=Mock(return_value=client)); cfg={'bucket':'bucket','prefix':'p','encryption':'default'}
         with patch.dict(sys.modules,{'boto3':module}),patch.dict(os.environ,{'BACKUP_S3_ACCESS_KEY_ID':'key','BACKUP_S3_SECRET_ACCESS_KEY':'secret'},clear=False): provider=backups.S3Provider(cfg)
         items=provider.list(); self.assertEqual([x.filename for x in items],[name])
@@ -160,6 +204,8 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(deleted,[{'Key':'p/'+name},{'Key':'p/'+name+'.manifest.json'}])
         client.head_object.return_value={'ContentLength':8,'Metadata':{'sha256':'b'*64}}
         self.assertEqual(provider.list(),[])
+        client.delete_objects.return_value={'Errors':[{'Code':'AccessDenied'}]}
+        with self.assertRaises(backups.BackupError): provider.delete(items[0])
 
     def test_drive_folder_is_rediscovered_and_upload_publishes_manifest_last(self):
         provider=object.__new__(backups.DriveProvider); service=Mock(); files=Mock(); service.files.return_value=files; provider.service=service
@@ -170,10 +216,53 @@ class BackupTests(unittest.TestCase):
         self.assertEqual([x['id'] for x in provider._find('sample.sqlite','snapshot')],['owned'])
         provider.folder='existing'; files.list.return_value.execute.return_value={'files':[]}
         path=db.backup(); data=backups.manifest(path)
-        files.create.return_value.execute.side_effect=[{'id':'snapshot-id','size':str(data['size']),'appProperties':{'sha256':data['sha256']}},{'id':'manifest-id'}]
+        manifest_payload=backups._manifest_bytes(data)
+        files.create.return_value.execute.side_effect=[
+            {'id':'snapshot-id','size':str(data['size']),'sha256Checksum':data['sha256']},
+            {'id':'manifest-id','size':str(len(manifest_payload)),'sha256Checksum':hashlib.sha256(manifest_payload).hexdigest()},
+        ]
         provider.upload(path,data)
         names=[call.kwargs['body']['name'] for call in files.create.call_args_list]
         self.assertEqual(names,[path.name,path.name+'.manifest.json'])
+
+    def test_drive_failed_replacement_preserves_previous_pair(self):
+        provider=object.__new__(backups.DriveProvider); provider.folder='existing'
+        service=Mock(); files=Mock(); service.files.return_value=files; provider.service=service
+        files.list.return_value.execute.side_effect=[
+            {'files':[{'id':'old-snapshot','appProperties':{'indigoStatsType':'snapshot'}}]},
+            {'files':[{'id':'old-manifest','appProperties':{'indigoStatsType':'manifest'}}]},
+        ]
+        files.create.return_value.execute.side_effect=RuntimeError('temporary upload failure')
+        path=db.backup(); data=backups.manifest(path)
+        with self.assertRaises(RuntimeError): provider.upload(path,data)
+        files.delete.assert_not_called()
+
+    def test_failed_transfer_clears_previous_completion(self):
+        destination='d'; name='20260921T120000Z.sqlite'
+        original={'filename':name,'sha256':'a'*64,'size':1}
+        replacement={'filename':name,'sha256':'b'*64,'size':2}
+        backups._record_attempt(destination,original,reference='old',complete=True)
+        backups._record_attempt(destination,replacement,error='failed')
+        with db.connect() as con:
+            row=con.execute('SELECT checksum,remote_reference,completed_at,error FROM backup_transfers').fetchone()
+        self.assertEqual(row['checksum'],'b'*64)
+        self.assertIsNone(row['remote_reference']); self.assertIsNone(row['completed_at'])
+        self.assertEqual(row['error'],'failed')
+        backups._record_attempt(destination,replacement,reference='new',complete=True)
+        backups._record_attempt(destination,replacement,error='failed again')
+        with db.connect() as con:
+            row=con.execute('SELECT remote_reference,completed_at,error FROM backup_transfers').fetchone()
+        self.assertIsNone(row['remote_reference']); self.assertIsNone(row['completed_at'])
+        self.assertEqual(row['error'],'failed again')
+
+    def test_retention_retries_without_a_new_upload(self):
+        path=db.backup(); data=backups.manifest(path)
+        current=backups.RemoteSnapshot(path.name,data['sha256'],data['size'],data['created_at'])
+        old=[backups.RemoteSnapshot(f'20260801T0000{i:02d}Z.sqlite','a'*64,1,i) for i in range(30)]
+        remote=Mock(); remote.list.return_value=[current]+old
+        backups.set_config({'provider':'filesystem'})
+        with patch.object(backups,'provider',return_value=remote): backups.run()
+        remote.upload.assert_not_called(); remote.delete.assert_called_once_with(old[0])
 
     def test_drive_invalid_token_requires_relink_without_exposing_token(self):
         backups._write_token('{"refresh_token":"PRIVATE INVALID"}')
@@ -247,20 +336,22 @@ class BackupTests(unittest.TestCase):
             self.assertIn('not writable', str(err.exception))
 
         with self.assertRaises(backups.BackupError) as err:
-            provider._path('../sneaky')
+            provider._validate_name('../sneaky')
         self.assertIn('Invalid remote backup name', str(err.exception))
 
         import shutil
         shutil.rmtree(self.root / 'indigo-stats', ignore_errors=True)
         (self.root / 'indigo-stats').symlink_to(self.root)
-        with self.assertRaises(backups.BackupError) as err:
-            provider._path('20260921T120000Z.sqlite')
-        self.assertIn('must not be a symlink', str(err.exception))
+        with patch('os.path.ismount', side_effect=self.mounted):
+            with self.assertRaises(backups.BackupError) as err:
+                provider._open_root(create=False).__enter__()
+        self.assertIn('unsafe', str(err.exception))
         (self.root / 'indigo-stats').unlink()
 
         snapshot = db.backup()
         data = backups.manifest(snapshot)
-        with patch('os.path.ismount', side_effect=self.mounted), patch.object(backups, 'checksum', return_value='wrong-checksum'):
+        with patch('os.path.ismount', side_effect=self.mounted), patch.object(
+                provider, '_file_checksum', return_value=('wrong-checksum', data['size'])):
             with self.assertRaises(backups.BackupError) as err:
                 provider.upload(snapshot, data)
             self.assertIn('Off-server copy verification failed', str(err.exception))
@@ -289,7 +380,15 @@ class BackupTests(unittest.TestCase):
             provider = backups.S3Provider({'bucket': 'test-bucket', 'prefix': 'p', 'region': 'us-east-1', 'encryption': 'sse-kms'})
             snapshot = db.backup()
             data = backups.manifest(snapshot)
-            mock_s3.head_object.return_value = {'ContentLength': data['size'], 'Metadata': {'sha256': data['sha256']}}
+            payload = snapshot.read_bytes()
+            manifest_payload = backups._manifest_bytes(data)
+            mock_s3.head_object.return_value = {
+                'ContentLength': data['size'], 'Metadata': {'sha256': data['sha256']},
+                'ServerSideEncryption': 'aws:kms',
+            }
+            mock_s3.get_object.side_effect = lambda **kwargs: {
+                'Body': io.BytesIO(manifest_payload if kwargs['Key'].endswith('.json') else payload),
+            }
             provider.upload(snapshot, data)
             upload_extra = mock_s3.upload_file.call_args[1]['ExtraArgs']
             self.assertEqual(upload_extra['ServerSideEncryption'], 'aws:kms')
@@ -304,7 +403,8 @@ class BackupTests(unittest.TestCase):
                 {'Contents': [{'Key': 'p/bad.sqlite.manifest.json'}]}
             ]
             mock_s3.get_object.side_effect = RuntimeError('s3 error')
-            self.assertEqual(provider.list(), [])
+            with self.assertRaises(RuntimeError):
+                provider.list()
 
             target = db.DATA / 's3_download.sqlite'
             item = backups.RemoteSnapshot('test.sqlite', 'sha', 10, 1, 'p/test.sqlite')
@@ -356,13 +456,16 @@ class BackupTests(unittest.TestCase):
             auth_err = Exception()
             auth_err.resp = types.SimpleNamespace(status=401)
             mock_service.files.return_value.list.return_value.execute.side_effect = None
-            mock_service.files.return_value.list.return_value.execute.return_value = {'files': [{'id': 'm1'}]}
+            mock_service.files.return_value.list.return_value.execute.return_value = {
+                'files': [{'id': 'm1', 'name': '20260921T120000Z.sqlite.manifest.json'}],
+            }
             mock_service.files.return_value.get_media.side_effect = auth_err
             with self.assertRaises(backups.RelinkRequired):
                 dp.list()
 
             mock_service.files.return_value.get_media.side_effect = RuntimeError('download error')
-            self.assertEqual(dp.list(), [])
+            with self.assertRaises(RuntimeError):
+                dp.list()
 
             # list() successful manifest parsing and snapshot match
             valid_manifest = json.dumps({
@@ -379,7 +482,8 @@ class BackupTests(unittest.TestCase):
                 mock_downloader.side_effect = fake_init
                 dp._find = Mock(return_value=[{
                     'id': 'snap-file-id',
-                    'appProperties': {'sha256': 'a' * 64, 'size': '1234'}
+                    'sha256Checksum': 'a' * 64,
+                    'size': '1234',
                 }])
                 listed = dp.list()
                 self.assertEqual(len(listed), 1)
@@ -397,6 +501,7 @@ class BackupTests(unittest.TestCase):
                 self.assertTrue(target.exists())
 
             dp._find = Mock(return_value=[{'id': 'f1'}])
+            mock_service.files.return_value.delete.return_value.execute.reset_mock()
             dp.delete(item)
             self.assertEqual(mock_service.files.return_value.delete.return_value.execute.call_count, 2)
 
@@ -515,6 +620,31 @@ class BackupTests(unittest.TestCase):
             with self.assertRaises(backups.BackupError) as err:
                 backups.google_callback('code', 'valid-state-2')
             self.assertIn('Google Drive support is not installed', str(err.exception))
+
+    def test_google_oauth_rejects_lookalike_localhost_and_bounds_state(self):
+        class Flow:
+            @classmethod
+            def from_client_config(cls, *args, **kwargs): return cls()
+            def authorization_url(self, **kwargs): return ('https://accounts.google.test/auth','ignored')
+        package=types.ModuleType('google_auth_oauthlib')
+        flow_module=types.ModuleType('google_auth_oauthlib.flow'); flow_module.Flow=Flow
+        base={'BACKUP_GOOGLE_CLIENT_ID':'id','BACKUP_GOOGLE_CLIENT_SECRET':'secret'}
+        with patch.dict(sys.modules,{'google_auth_oauthlib':package,'google_auth_oauthlib.flow':flow_module}):
+            with patch.dict(os.environ,base|{'BACKUP_GOOGLE_CALLBACK_URI':'http://localhost.evil/callback'},clear=False):
+                with self.assertRaises(backups.BackupError): backups.google_authorization_url()
+            with patch.dict(os.environ,base|{'BACKUP_GOOGLE_CALLBACK_URI':'http://localhost:8000/callback'},clear=False):
+                for _ in range(backups.MAX_OAUTH_STATES+5): backups.google_authorization_url()
+        self.assertEqual(len(backups._oauth_states),backups.MAX_OAUTH_STATES)
+
+    def test_async_failure_releases_run_lock(self):
+        finished=threading.Event()
+        def fail():
+            try: raise RuntimeError('failure')
+            finally: finished.set()
+        with patch.object(backups,'_execute',side_effect=fail):
+            self.assertTrue(backups.start_async()); self.assertTrue(finished.wait(2))
+        self.assertTrue(backups._run_lock.acquire(timeout=2))
+        backups._run_lock.release()
 
 
 if __name__=='__main__': unittest.main()

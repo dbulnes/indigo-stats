@@ -21,6 +21,7 @@ docker volume create "$offsite_volume" >/dev/null
 docker run --rm --platform "$platform" --entrypoint chown -v "$offsite_volume:/offsite" "$image" 99:100 /offsite
 start() {
     docker run -d --platform "$platform" --name "$name" --init \
+        --read-only --tmpfs /tmp:size=64m,mode=1777 \
         --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
         --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
         -e DISABLE_JOBS=1 -e PUID=99 -e PGID=100 \
@@ -33,6 +34,7 @@ start() {
     exit 1
 }
 start
+docker exec "$name" sh -c 'if touch /root-filesystem-must-stay-read-only 2>/dev/null; then exit 1; fi'
 docker exec "$name" python -c "from pathlib import Path; pid=Path('/proc/1/task/1/children').read_text().split()[0]; s=Path('/proc/'+pid+'/status').read_text(); assert 'Uid:\t99\t99\t99\t99' in s, s"
 docker exec -u 99:100 "$name" python -c "from backend import db; db.set_settings({'smoke_marker':'retained'}); from backend import jobs; jobs.store_reading({'SensorId':'synthetic','current_temp_f':81,'current_humidity':42,'pm2_5_cf_1':15,'pm2_5_cf_1_b':15},{},120); db.backup()"
 docker stop -t 35 "$name" >/dev/null
@@ -57,6 +59,10 @@ assert len(backups.remote_list()) == 1
 assert (remote / 'unrelated.txt').read_text() == 'preserve'
 OFFSITE
 docker exec -u 99:100 "$name" python -c "from pathlib import Path; files=list(Path('/offsite/indigo-stats').glob('*.sqlite')); manifests=list(Path('/offsite/indigo-stats').glob('*.manifest.json')); assert len(files)==len(manifests)==1"
+docker stop -t 35 "$name" >/dev/null
+docker rm "$name" >/dev/null
+start
+docker exec -u 99:100 "$name" python -c "import sqlite3; from backend import backups; items=backups.remote_list(); assert len(items)==1; path=backups.fetch(items[0].filename); con=sqlite3.connect(path); assert con.execute('PRAGMA integrity_check').fetchone()[0]=='ok'; con.close()"
 docker exec -i -u 99:100 "$name" python - <<'CHECK'
 import json
 import sqlite3
@@ -85,6 +91,7 @@ docker rm "$name" >/dev/null
 # A configured filesystem destination must fail closed when /offsite is absent.
 docker run --rm --platform "$platform" --init --cap-drop=ALL --cap-add=CHOWN --cap-add=DAC_OVERRIDE \
     --cap-add=SETUID --cap-add=SETGID --security-opt=no-new-privileges:true \
+    --read-only --tmpfs /tmp:size=64m,mode=1777 \
     -e PUID=99 -e PGID=100 -v "$volume:/data" "$image" \
     python -c "from backend import db,backups; db.initialize(); p=backups.FilesystemProvider(); exec('try:\n p.probe(); raise SystemExit(1)\nexcept backups.BackupError:\n pass')"
 echo 'PASS: verified off-server copy persisted and missing /offsite fails closed'

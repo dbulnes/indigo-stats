@@ -1,12 +1,15 @@
 """Local storage. The complete DATA_DIR must be a persistent, local volume."""
 import json
 import os
+import secrets
 import sqlite3
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
 DATA = Path(os.getenv('DATA_DIR', '/data'))
+BACKUP_LOCK = threading.Lock()
 
 @contextmanager
 def connect():
@@ -22,21 +25,41 @@ def connect():
         con.close()
 
 def backup():
-    folder = DATA / 'backups'
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / (time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()) + '.sqlite')
-    with connect() as source:
-        target = sqlite3.connect(path)
+    with BACKUP_LOCK:
+        folder = DATA / 'backups'
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / (time.strftime('%Y%m%dT%H%M%SZ', time.gmtime()) + '.sqlite')
+        partial = folder / f'.{path.name}.{secrets.token_hex(6)}.partial'
         try:
-            source.backup(target)
-            if target.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
-                raise RuntimeError('Backup integrity verification failed')
+            with connect() as source:
+                target = sqlite3.connect(partial)
+                try:
+                    source.backup(target)
+                    if target.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+                        raise RuntimeError('Backup integrity verification failed')
+                finally:
+                    target.close()
+            os.chmod(partial, 0o600)
+            with partial.open('rb') as snapshot:
+                os.fsync(snapshot.fileno())
+            os.replace(partial, path)
+            directory = os.open(folder, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
         finally:
-            target.close()
-    os.chmod(path, 0o600)
-    for old in sorted(folder.glob('*.sqlite'))[:-14]:
-        old.unlink()
-    return path
+            partial.unlink(missing_ok=True)
+        for old in sorted(folder.glob('*.sqlite'))[:-14]:
+            old.unlink()
+        return path
+
+
+def _versioned_migration(path, version):
+    script = path.read_text(encoding='utf-8').rstrip()
+    if not script.endswith('COMMIT;'):
+        raise RuntimeError(f'Migration {path.name} must end with COMMIT;')
+    return script[:-len('COMMIT;')] + f'PRAGMA user_version={version};\nCOMMIT;\n'
 
 def initialize():
     DATA.mkdir(parents=True, exist_ok=True)
@@ -58,9 +81,7 @@ def initialize():
         con.execute('PRAGMA journal_mode=WAL')
         for i in range(version, target_version):
             script_path = migrations[i]
-            with open(script_path, 'r', encoding='utf-8') as f:
-                con.executescript(f.read())
-            con.execute(f'PRAGMA user_version={i + 1}')
+            con.executescript(_versioned_migration(script_path, i + 1))
             
     os.chmod(DATA / 'indigo.sqlite', 0o600)
 

@@ -229,7 +229,7 @@ function App() {
     try {
       await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Indigo-Request': '1' },
         body: JSON.stringify({ UNITS: next }),
       })
     } catch {

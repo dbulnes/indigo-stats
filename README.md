@@ -34,7 +34,7 @@ Browser / installed PWA → Tailscale HTTPS → FastAPI → SQLite on appdata
 
 Use one Uvicorn worker: the application owns the scheduled collection jobs. The entrypoint initializes permissions on the dedicated `/data` mount and drops privileges to PUID/PGID (Unraid defaults 99:100). The root filesystem is read-only. No Docker socket, host networking, SSH, host startup scripts, or automatic Tailscale configuration is required.
 
-The Unraid template publishes a trusted-LAN port. The optional Compose example binds to loopback for a host reverse proxy. There is no application login: restrict access to your trusted LAN/tailnet and never publish it directly to the internet.
+The Unraid template publishes a trusted-LAN port. The optional Compose example binds to loopback for a host reverse proxy. There is no application login: restrict access to your trusted LAN/tailnet and never publish it directly to the internet. Every client that can reach the app is effectively an administrator and can change settings or redirect future backup copies, so network access is part of the security boundary.
 
 Off-server backup is optional and never places the live SQLite database on remote storage. The filesystem provider writes only beneath a distinct host-managed mount at `/offsite`; mount NFS, SMB/CIFS, or SSHFS on the host first and make it writable by the configured PUID/PGID. S3 credentials and Google OAuth client secrets are accepted only through environment or `_FILE` secrets. See [operations](docs/operations.md#off-server-backups), the [Google Drive setup guide](docs/google-drive-backup-setup.md), and the [S3 setup guide](docs/s3-backup-setup.md) for setup and recovery.
 
