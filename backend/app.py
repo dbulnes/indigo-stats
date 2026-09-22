@@ -256,9 +256,12 @@ def history(start:int=Query(ge=0),end:int=Query(ge=0),step:int=Query(default=60,
             AVG(pm25) pm25,MIN(pm25) pm_min,MAX(pm25) pm_max,COUNT(*) samples,
             SUM(CASE WHEN quality!='' THEN 1 ELSE 0 END) flagged
             FROM readings WHERE ts>=? AND ts<? GROUP BY ts/?''',(effective,effective,start,end,effective))]
-        stats=dict(con.execute(f'''SELECT COUNT(*) samples,MIN({temp}) temp_min,MAX({temp}) temp_max,
-            AVG({temp}) temp_mean,AVG({rh}) humidity_mean,AVG(pm25) pm_mean,
-            MAX(pm25) pm_max,MIN(pm25) pm_min FROM readings WHERE ts>=? AND ts<?''',(start,end)).fetchone())
+        if rows:
+            stats=dict(con.execute(f'''SELECT COUNT(*) samples,MIN({temp}) temp_min,MAX({temp}) temp_max,
+                AVG({temp}) temp_mean,AVG({rh}) humidity_mean,AVG(pm25) pm_mean,
+                MAX(pm25) pm_max,MIN(pm25) pm_min FROM readings WHERE ts>=? AND ts<?''',(start,end)).fetchone())
+        else:
+            stats={'samples':0,'temp_min':None,'temp_max':None,'temp_mean':None,'humidity_mean':None,'pm_mean':None,'pm_max':None,'pm_min':None}
         forecasts=forecast_rows(con,start,end)
     for r in rows:
         r['aqi']=aqi(r['pm25'])

@@ -9,7 +9,8 @@ import {
 } from 'lucide-react'
 const SystemSettings = React.lazy(() => import('./SystemSettings').then(m => ({ default: m.SystemSettings })))
 const BackupSettings = React.lazy(() => import('./BackupSettings').then(m => ({ default: m.BackupSettings })))
-import { AstronomyPanel, type AstronomyData } from './AstronomyPanel'
+const AstronomyPanel = React.lazy(() => import('./AstronomyPanel').then(m => ({ default: m.AstronomyPanel })))
+import type { AstronomyData } from './AstronomyPanel'
 import { weatherCondition, uvLabel, toC, toKmh } from './weather'
 import './style.css'
 
@@ -372,14 +373,15 @@ function App() {
 
   // Overview 24h PM2.5 trend points
   const recentTrend = useMemo(() => {
-    const past24 = Date.now() / 1000 - 86400
+    const past24 = anchor - 86400
     return history.points
       .filter(p => p.ts >= past24)
       .map(p => ({ ts: p.ts, pm25: p.pm25 }))
-  }, [history.points])
+  }, [history.points, anchor])
 
   // History main chart preparation
   const chart = useMemo(() => {
+    if (tab !== 'History') return []
     const map = new Map<number, Record<string, number | null>>()
     const step = history.step
     const getRow = (t: number) => {
@@ -395,16 +397,19 @@ function App() {
         const v = getMetric(f, metric)
         if (v != null) {
           const t = Math.floor(f.valid / step) * step
-          grouped.set(t, [...(grouped.get(t) ?? []), v])
+          let list = grouped.get(t)
+          if (!list) { list = []; grouped.set(t, list) }
+          list.push(v)
         }
       }
       for (const [t, vs] of grouped) getRow(t).forecast = vs.reduce((a, b) => a + b, 0) / vs.length
     }
     if (comparison) for (const p of previous.points) getRow(p.ts + end - start).previous = getMetric(p, metric)
-    return [...map.values()].sort((a, b) => a.ts! - b.ts!)
-  }, [history, previous, metric, showForecast, comparison, start, end, units])
+    return [...map.values()]
+  }, [tab, history, previous, metric, showForecast, comparison, start, end, units])
 
   const hourly = useMemo(() => {
+    if (tab !== 'History') return []
     const values: Array<number[]> = Array.from({ length: 24 }, () => [])
     for (const p of history.points) {
       const v = getMetric(p, metric)
@@ -417,15 +422,16 @@ function App() {
       hour: `${h.toString().padStart(2, '0')}:00`,
       value: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null,
     }))
-  }, [history, metric, hourFormatter, units])
+  }, [tab, history, metric, hourFormatter, units])
 
   const filteredPoints = useMemo(() => {
+    if (tab !== 'History') return []
     const thresh = threshold.trim() !== '' ? Number(threshold) : null
     return [...history.points]
       .reverse()
       .filter(p => thresh === null || (p.pm_max != null && p.pm_max >= thresh) || Boolean(p.above_threshold))
       .slice(0, 100)
-  }, [history.points, threshold])
+  }, [tab, history.points, threshold])
 
   const stats = history.stats
   const coverage = Math.min(100, (stats.samples / Math.max(1, (Math.min(end, Date.now() / 1000) - start) / 60)) * 100)
@@ -752,13 +758,15 @@ function App() {
             </section>
 
             {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
-            <AstronomyPanel
-              data={astronomy}
-              loading={loading}
-              timezone={tz}
-              units={units}
-              onConfigureClick={() => setTab('System')}
-            />
+            <React.Suspense fallback={<div className="panel"><div className="notice">Loading night sky observatory…</div></div>}>
+              <AstronomyPanel
+                data={astronomy}
+                loading={loading}
+                timezone={tz}
+                units={units}
+                onConfigureClick={() => setTab('System')}
+              />
+            </React.Suspense>
 
             {/* Bottom 3-Column Grid: 10-Day Forecast, 24h PM2.5 Trend, Weather Details */}
             <section className="overview-bottom-grid">

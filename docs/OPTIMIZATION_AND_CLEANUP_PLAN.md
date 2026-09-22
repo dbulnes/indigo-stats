@@ -50,3 +50,26 @@ This document details optimization and cleanup tasks for the backend, database l
 - **Location**: [`backend/backups.py`](file:///Users/davidbulnes/git/indigo-stats/backend/backups.py#L184) and [`backend/app.py`](file:///Users/davidbulnes/git/indigo-stats/backend/app.py#L38)
 - **Problem**: In `backups.manifest()`, `from .app import APP_VERSION` is imported inside the function to avoid circular imports. This causes CLI management tools (`backend/manage.py`) or backup verification utilities to import `FastAPI`, `Starlette`, and the entire web stack.
 - **Fix**: Store `APP_VERSION` in `backend/__init__.py` or `backend/version.py`, export it from `backend.app` for backwards compatibility, and update `scripts/bump-version.mjs`.
+
+---
+
+## 4. Additional Runtime & Client-Side Optimizations
+
+### A. Lazy-Loaded Astronomy & Observatory Panel
+- **Location**: [`web/src/main.tsx`](file:///Users/davidbulnes/git/indigo-stats/web/src/main.tsx#L12)
+- **Change**: Dynamically imported `AstronomyPanel` with `React.lazy()` and `<React.Suspense>`.
+- **Result**: Splits 671 lines of astronomical calculations and SVG celestial domes into its own isolated `AstronomyPanel-*.js` chunk (16.67 kB), allowing the top viewport (hero banner and hourly strip) to render without waiting on astronomy modules.
+
+### B. Viewport/Tab-Aware Data Derivation
+- **Location**: [`web/src/main.tsx`](file:///Users/davidbulnes/git/indigo-stats/web/src/main.tsx#L383-L435)
+- **Change**: Conditioned `chart` (1,600-point time series data), `hourly` (24-bucket diurnal distribution), and `filteredPoints` (100-row table slice) computations to execute only when `tab === 'History'`.
+- **Result**: When users stay on the default `Overview` or `System` tabs, expensive Recharts map structures and diurnal reductions are completely bypassed on minute ticker intervals.
+
+### C. Zero-Allocation History Grouping
+- **Location**: [`web/src/main.tsx`](file:///Users/davidbulnes/git/indigo-stats/web/src/main.tsx#L400)
+- **Change**: Replaced `grouped.set(t, [...(grouped.get(t) ?? []), v])` with mutable list lookup and in-place push, eliminating repeated array cloning across forecast points.
+
+### D. History Stats Query Bypass on Empty Ranges
+- **Location**: [`backend/app.py`](file:///Users/davidbulnes/git/indigo-stats/backend/app.py#L261)
+- **Change**: Skipped the secondary aggregate scan query `SELECT COUNT(*), MIN(...), MAX(...) FROM readings` when the primary grouped rows query returns zero results.
+- **Result**: Halves database queries for empty ranges or newly initialized databases.
