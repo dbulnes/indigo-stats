@@ -64,7 +64,7 @@ The script always builds the ARM64 image and runs the full disposable smoke test
 
 Community Applications metadata is maintained separately in [dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid). This repository owns the application source, Dockerfile, runtime documentation, tests, and image release workflow. The packaging repository owns the Unraid template, icon, CA profile, packaging license, and submission documentation.
 
-When a public image is available, install it through Unraid using the separate template. Choose a dedicated persistent local appdata directory, enter your sensor's LAN IPv4 address and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Neither repository deploys to a host automatically.
+When a public image is available, install it through Unraid using the separate template. Choose a dedicated persistent local appdata directory, enter your sensor's LAN IPv4 address and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Publishing the image alone does not replace users' running containers; Unraid detects the new `latest` digest as an available update. The maintainer release script separately updates its configured Unraid host by default after verification.
 
 Forecasts default to disabled. To enable them, provide both private coordinates and set `FORECAST_ENABLED=true`. Coordinates are sent to Open-Meteo. Coordinates and raw sensor network metadata are omitted from dashboard APIs. Private settings are stored in SQLite; environment settings supplied on startup take precedence. Removing an environment value does not erase a stored setting; explicitly disable forecasts to stop requests.
 
@@ -102,7 +102,15 @@ Release with one command from the repository root:
 sh scripts/release.sh patch
 ```
 
-Use `major`, `minor`, `patch`, or an explicit semantic version such as `0.3.0`. The script bumps the version across `web/package.json`, `web/package-lock.json`, and `backend/app.py`, commits, pushes to `main`, waits for CI to pass (requires [GitHub CLI](https://cli.github.com/)), then creates and pushes an annotated `vX.Y.Z` tag to trigger the release workflow. It refuses to proceed on a dirty tree, a non-main branch, or when local and remote histories diverge.
+Use `major`, `minor`, `patch`, or an explicit semantic version such as `0.3.0`. The script bumps the version across `web/package.json`, `web/package-lock.json`, and `backend/app.py`, commits, pushes to `main`, waits for CI to pass, then creates and pushes an annotated `vX.Y.Z` tag and waits for the GHCR release workflow. After publication it verifies the image index contains the supported `linux/amd64` image and its attestations, confirms `latest` is publicly pullable at the expected version, and runs the disposable smoke test. It then deploys the verified image to the configured Unraid host with `scripts/deploy-unraid.sh`.
+
+Releasing requires the [GitHub CLI](https://cli.github.com/) for unattended workflow checks and a running Docker installation with Buildx for image verification. The Unraid deployment uses the local `sshhomelab` alias (or `UNRAID_SSH`). To publish and verify a release without updating that host, disable only the final deployment step:
+
+```sh
+DEPLOY_UNRAID=0 sh scripts/release.sh patch
+```
+
+The script refuses to proceed on a dirty tree, a non-main branch, or when local and remote histories diverge.
 
 To bump the version without releasing, use `node scripts/bump-version.mjs <major|minor|patch|X.Y.Z>` directly. CI runs `node scripts/bump-version.mjs --check` to reject version drift.
 
