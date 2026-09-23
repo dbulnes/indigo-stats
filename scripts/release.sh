@@ -11,6 +11,8 @@
 #   4. Push the commit to origin/main
 #   5. Wait for the "Build and test" CI workflow to pass
 #   6. Create an annotated tag vX.Y.Z and push it (triggers the release workflow)
+#   7. Verify the public AMD64 image and run the release smoke test
+#   8. Deploy the verified image to Unraid
 
 set -euo pipefail
 
@@ -158,6 +160,40 @@ if command -v gh >/dev/null 2>&1; then
     warn "Could not locate release workflow for ${TAG}"
   fi
 fi
+
+# ── Verify published image ──────────────────────────────────────────
+IMAGE="ghcr.io/dbulnes/indigo-stats:latest"
+
+command -v docker >/dev/null 2>&1 || die "Docker is required to verify the published release image"
+docker info >/dev/null 2>&1 || die "Docker is not running — start it before releasing"
+
+info "Inspecting the published image index…"
+MANIFEST_OUTPUT="$(docker buildx imagetools inspect "$IMAGE")" || die "Could not inspect ${IMAGE}"
+printf "%s\n" "$MANIFEST_OUTPUT"
+echo "$MANIFEST_OUTPUT" | grep -Eq 'Platform:[[:space:]]+linux/amd64' || \
+  die "Published image index does not contain linux/amd64"
+echo "$MANIFEST_OUTPUT" | grep -Eq 'Platform:[[:space:]]+unknown/unknown' || \
+  die "Published image index does not contain its attestation manifest"
+ok "Published image index contains linux/amd64 and attestations"
+
+info "Confirming the package is publicly pullable…"
+ANON_DOCKER_CONFIG="$(mktemp -d)"
+cleanup_anon_docker_config() {
+  rmdir "$ANON_DOCKER_CONFIG" 2>/dev/null || true
+}
+trap cleanup_anon_docker_config EXIT
+docker --config "$ANON_DOCKER_CONFIG" pull --platform linux/amd64 "$IMAGE"
+cleanup_anon_docker_config
+trap - EXIT
+
+PUBLISHED_VERSION="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "$IMAGE")"
+[ "$PUBLISHED_VERSION" = "$VERSION" ] || \
+  die "Published latest image is version ${PUBLISHED_VERSION:-unknown}, expected ${VERSION}"
+ok "Public latest image is release ${VERSION}"
+
+info "Running the release image smoke test…"
+sh "$REPO_ROOT/deploy/smoke-test.sh" "$IMAGE"
+ok "Release image smoke test passed"
 
 # ── Summary ─────────────────────────────────────────────────────────
 printf "\n${BOLD}${GREEN}Release ${VERSION} complete!${RESET}\n"
