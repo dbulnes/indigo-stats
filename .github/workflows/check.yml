@@ -44,8 +44,17 @@ jobs:
       - name: Build TypeScript frontend and PWA
         run: npm ci && npm run build
         working-directory: web
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
       - name: Build native container image
-        run: docker build --platform linux/amd64 -t indigo-stats-ci:amd64 .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: indigo-stats-ci:amd64
+          cache-from: type=gha,scope=indigo-stats-amd64
+          cache-to: ${{ github.ref == 'refs/heads/main' && 'type=gha,mode=max,scope=indigo-stats-amd64' || '' }}
       - name: Test container startup and persistence
         run: sh deploy/smoke-test.sh indigo-stats-ci:amd64
       - name: Python Coverage Comment and Badge
