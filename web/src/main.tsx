@@ -4,7 +4,7 @@ import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Line, ResponsiveCont
 import {
   Activity, ArrowDownToLine, ArrowUpRight, ChevronLeft, ZoomIn, ZoomOut,
   CalendarDays, Check, ChevronRight, CircleHelp, Clock3, Database, Droplets,
-  Gauge, History, LayoutDashboard, RefreshCw, Settings2, ShieldCheck,
+  Gauge, History, LayoutDashboard, Settings2, ShieldCheck,
   Thermometer, Waves, Wind, Sun, Cloud, Moon
 } from 'lucide-react'
 const SystemSettings = React.lazy(() => import('./SystemSettings').then(m => ({ default: m.SystemSettings })))
@@ -228,20 +228,6 @@ function App() {
     return () => ctrl.abort()
   }, [start, end, tick, comparison, environmentMode])
 
-  const toggleUnits = async () => {
-    const next = units === 'imperial' ? 'metric' : 'imperial'
-    setUnits(next)
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Indigo-Request': '1' },
-        body: JSON.stringify({ UNITS: next }),
-      })
-    } catch {
-      // Best-effort setting sync
-    }
-  }
-
   const tz = status?.timezone ?? 'America/Los_Angeles'
   const time = (ts: number, full = false) =>
     new Date(ts * 1000).toLocaleString(undefined, {
@@ -296,18 +282,6 @@ function App() {
   const meta = metrics[metric]
   const liveAqi = reading?.aqi ?? (reading?.pm25 != null ? aq(reading.pm25) : null)
   const currentAqi = liveAqi ?? latest?.nowcast_aqi
-  const connectionTone = offline || error || latest?.stale ? 'warning' : !latest ? 'loading' : 'healthy'
-  const connectionLabel = offline
-    ? 'Offline'
-    : error
-    ? 'Connection lost'
-    : !latest
-    ? 'Loading'
-    : latest.stale
-    ? 'Awaiting sensor'
-    : 'Collecting every minute'
-  const compactConnectionLabel = connectionLabel === 'Collecting every minute' ? '1 min updates' : connectionLabel
-
   function getMetric(obj: any, m: Metric) {
     if (!obj) return null
     if (m === 'aqi') return obj.aqi ?? aq(obj.pm25)
@@ -534,23 +508,6 @@ function App() {
       </aside>
 
       <main>
-        <header className="topbar">
-          <span>YOUR ENVIRONMENT <ChevronRight size={12} /> {tab.toUpperCase()}</span>
-          <div className="top-actions">
-            <button className="unit-toggle" onClick={toggleUnits} title="Toggle between Imperial and Metric units">
-              {units === 'imperial' ? '°F · mph' : '°C · km/h'}
-            </button>
-            <span className={`live ${connectionTone}`} role="status" aria-live="polite" aria-label={connectionLabel}>
-              <i />
-              <span className="live-label-full">{connectionLabel}</span>
-              <span className="live-label-compact">{compactConnectionLabel}</span>
-            </span>
-            <button className="icon-button" onClick={() => setTick(t => t + 1)} aria-label="Refresh readings" aria-busy={loading}>
-              <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-            </button>
-          </div>
-        </header>
-
         <section className="page-heading">
           <div>
             <span className="eyebrow">{tab === 'System' ? 'SYSTEM' : 'OBSERVATORY'}</span>

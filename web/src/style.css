@@ -21,9 +21,6 @@
 .notice.error{background:#332025;border-color:#5e3d46;color:#d8969f;}
 .backup-settings{display:flex;flex-direction:column;gap:16px;margin-top:18px}.backup-health{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.backup-health>div{background:#141d2a;border:1px solid #293648;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:7px}.backup-health strong{font-size:11px;font-weight:500;color:#d4deea}.backup-health span{font-size:10px;color:#8fa1b8;line-height:1.5}.backup-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.backup-fields>p{grid-column:1/-1;margin:0}.backup-actions{display:flex;gap:10px;flex-wrap:wrap}.backup-actions>button:first-child{background:#70d8c2;color:#101a27;border:0;border-radius:6px;padding:9px 16px;font-size:12px;font-weight:600}.backup-actions button:disabled{opacity:.5;cursor:not-allowed}
 
-.unit-toggle{background:#1a2738;border:1px solid #33445b;border-radius:6px;color:#c6d4e5;padding:6px 12px;font-size:11px;font-weight:600;display:flex;align-items:center;transition:all .15s}
-.unit-toggle:hover{background:#25374d;border-color:#485e7d;color:#fff}
-
 .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
 .hero-card{background:#172130;border:1px solid #2b3646;border-radius:12px;padding:24px;display:flex;flex-direction:column;position:relative}
 .hero-card .panel-heading{margin-bottom:12px}
@@ -299,8 +296,7 @@ body::before {
   color: #8090aa;
 }
 
-.status-dot,
-.live i {
+.status-dot {
   background: var(--mint);
   box-shadow: 0 0 0 4px rgba(114, 225, 194, 0.08), 0 0 16px rgba(114, 225, 194, 0.65);
 }
@@ -372,24 +368,6 @@ main {
   position: relative;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  border-bottom-color: var(--stroke);
-  background: linear-gradient(180deg, rgba(8, 13, 24, 0.92), rgba(8, 13, 24, 0.72));
-  backdrop-filter: blur(22px) saturate(140%);
-}
-
-.topbar::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(163, 146, 255, 0.22), rgba(92, 190, 220, 0.14), transparent);
-}
-
-.topbar > span,
 .eyebrow {
   color: #8f9db5;
 }
@@ -433,51 +411,10 @@ h2 {
   background: rgba(17, 25, 42, 0.48);
 }
 
-.live,
 .pill,
 .aqi-pill {
   border-radius: 999px;
   backdrop-filter: blur(12px);
-}
-
-.live {
-  min-height: 30px;
-  padding: 6px 11px;
-  border: 1px solid rgba(114, 225, 194, 0.18);
-  background: rgba(33, 77, 70, 0.18);
-  color: #a8d9ce;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
-}
-
-.live-label-compact {
-  display: none;
-}
-
-.live.healthy i {
-  animation: status-breathe 2.4s ease-in-out infinite;
-}
-
-.live.loading {
-  border-color: rgba(169, 154, 255, 0.2);
-  background: rgba(87, 71, 148, 0.16);
-  color: #c0b7ea;
-}
-
-.live.loading i {
-  background: var(--violet);
-  box-shadow: 0 0 14px rgba(169, 154, 255, 0.66);
-  animation: status-breathe 1.2s ease-in-out infinite;
-}
-
-.live.warning {
-  border-color: rgba(244, 191, 120, 0.25);
-  background: rgba(108, 70, 27, 0.17);
-  color: #efc998;
-}
-
-.live.warning i {
-  background: var(--amber);
-  box-shadow: 0 0 14px rgba(244, 191, 120, 0.6);
 }
 
 .panel,
@@ -761,7 +698,6 @@ select:focus-visible {
 }
 
 .icon-button,
-.unit-toggle,
 .secondary {
   min-height: 36px;
   border-color: rgba(145, 165, 201, 0.2);
@@ -774,7 +710,6 @@ select:focus-visible {
 }
 
 .icon-button:hover,
-.unit-toggle:hover,
 .secondary:hover {
   color: #f2f4fa;
   border-color: rgba(169, 154, 255, 0.38);
@@ -1140,13 +1075,6 @@ tbody tr:hover {
     opacity: 1;
   }
 
-  .topbar {
-    position: relative;
-    top: auto;
-    margin-inline: -20px;
-    padding-inline: 20px;
-  }
-
   .hero-card {
     min-height: 0;
   }
@@ -1167,33 +1095,6 @@ tbody tr:hover {
 
   .brand {
     font-size: 23px;
-  }
-
-  .topbar {
-    top: auto;
-    margin-inline: -13px;
-    padding-inline: 13px;
-  }
-
-  .top-actions {
-    gap: 6px;
-  }
-
-  .live {
-    padding-inline: 8px;
-    white-space: nowrap;
-  }
-
-  .live-label-full {
-    display: none;
-  }
-
-  .live-label-compact {
-    display: inline;
-  }
-
-  .unit-toggle {
-    padding-inline: 9px;
   }
 
   .page-heading {
@@ -1219,7 +1120,6 @@ tbody tr:hover {
 
 @media(prefers-reduced-motion:reduce) {
   .status-dot,
-  .live i,
   .orbit,
   .panel,
   .hero-card,
