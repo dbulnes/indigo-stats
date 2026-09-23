@@ -1139,6 +1139,8 @@ tbody tr:hover {
   .topbar {
     position: relative;
     top: auto;
+    margin-inline: -20px;
+    padding-inline: 20px;
   }
 
   .hero-card {
@@ -1147,17 +1149,6 @@ tbody tr:hover {
 
   .coordinate-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media(max-width:600px) {
-  .topbar > span {
-    display: none;
-  }
-
-  .top-actions {
-    width: 100%;
-    justify-content: space-between;
   }
 }
 
@@ -1176,6 +1167,8 @@ tbody tr:hover {
 
   .topbar {
     top: auto;
+    margin-inline: -13px;
+    padding-inline: 13px;
   }
 
   .top-actions {
