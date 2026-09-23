@@ -67,8 +67,11 @@
 .hourly-aqi-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .hourly-aqi-num{font-size:10px;font-weight:500;color:#9cb0c6;line-height:1}
 
-.overview-bottom-grid{display:grid;grid-template-columns:1.2fr 1.3fr 1fr;gap:18px;margin-bottom:22px}
+.overview-bottom-grid{display:grid;grid-template-columns:minmax(310px,1.05fr) minmax(0,1.95fr);gap:18px;margin-bottom:22px;align-items:stretch}
 .overview-bottom-grid .panel{margin-bottom:0}
+.overview-right-stack{display:flex;flex-direction:column;gap:18px}
+.overview-right-stack .trend-panel{flex:1;display:flex;flex-direction:column}
+.overview-right-stack .trend-panel .trend-chart{flex:1;min-height:160px;height:100%;margin-top:8px}
 
 .daily-list{display:flex;flex-direction:column;gap:4px;margin-top:10px}
 .daily-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #233041;font-size:12px}
@@ -85,7 +88,7 @@
 .trend-stat strong{font-size:16px;color:#d5dfeb;font-weight:500;margin-left:4px}
 .trend-chart{height:160px;margin-top:8px}
 
-.detail-stack{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.detail-stack{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
 .detail-item{padding:9px 12px;background:#141d2a;border:1px solid #233041;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
 .detail-item-left{display:flex;flex-direction:column;gap:2px}
 .detail-item-label{font-size:10px;color:#8596ab;letter-spacing:.5px;text-transform:uppercase}
@@ -171,19 +174,22 @@
 .astro-setup-btn{margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#223144;border:1px solid #364b63;border-radius:6px;color:#cbd9eb;font-size:11px;font-weight:500;cursor:pointer}
 
 @media(max-width:1150px){
-  .overview-bottom-grid{grid-template-columns:1fr 1fr}
+  .overview-bottom-grid{grid-template-columns:1fr 1.35fr}
+  .detail-stack{grid-template-columns:repeat(2,1fr)}
   .astro-hybrid-grid{grid-template-columns:1fr 1fr}
   .planets-events-card{grid-column:span 2}
 }
 @media(max-width:800px){
   .hero-grid{grid-template-columns:1fr}
   .overview-bottom-grid{grid-template-columns:1fr}
+  .detail-stack{grid-template-columns:repeat(2,1fr)}
   .backup-health,.backup-fields{grid-template-columns:1fr}
   .hero-temp{font-size:44px}
   .astro-hybrid-grid{grid-template-columns:1fr}
   .planets-events-card{grid-column:span 1}
 }
 @media(max-width:450px){
+  .detail-stack{grid-template-columns:1fr}
   .hero-temp{font-size:38px}
   .hourly-item{min-width:56px;padding:8px 4px}
   .moon-main-row{flex-direction:column;text-align:center}

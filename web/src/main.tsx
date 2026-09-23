@@ -755,106 +755,117 @@ function App() {
                 </div>
               </article>
 
-              {/* Column 2: 24-Hour PM2.5 Trend */}
-              <article className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">TREND</span>
-                    <h2>24-Hour PM2.5</h2>
-                  </div>
-                  <button
-                    className="icon-button"
-                    onClick={() => { setTab('History'); setMetric('pm25'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                    title="Open History tab"
-                  >
-                    <ArrowUpRight size={15} />
-                  </button>
-                </div>
-                <div className="trend-summary">
-                  <span className="trend-stat">Current: <strong>{fmt(reading?.pm25)}</strong></span>
-                  <span className="trend-stat">Avg: <strong>{fmt(stats.pm_mean)}</strong></span>
-                  <span className="trend-stat">Peak: <strong>{fmt(stats.pm_max)}</strong></span>
-                </div>
-                <div className="trend-chart">
-                  {recentTrend.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={recentTrend} margin={{ top: 8, right: 4, bottom: 0, left: -25 }}>
-                        <defs>
-                          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#70d8c2" stopOpacity={0.3} />
-                            <stop offset="100%" stopColor="#70d8c2" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid stroke="#26313e" strokeDasharray="3 5" vertical={false} />
-                        <XAxis dataKey="ts" tickFormatter={t => time(t)} stroke="#7d8a9a" tickLine={false} axisLine={false} minTickGap={50} />
-                        <YAxis stroke="#7d8a9a" tickLine={false} axisLine={false} domain={[0, 'auto']} />
-                        <Tooltip contentStyle={{ background: '#1a2533', border: '1px solid #3c4c60', borderRadius: 8 }} labelFormatter={v => time(Number(v), true)} formatter={v => [fmt(Number(v)), 'µg/m³']} />
-                        <Area type="monotone" dataKey="pm25" name="PM2.5" stroke="#70d8c2" fill="url(#trendFill)" strokeWidth={2} dot={false} isAnimationActive={false} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="empty-small">Waiting for recent readings to plot trend.</div>
-                  )}
-                </div>
-              </article>
-
-              {/* Column 3: Weather Details */}
-              <article className="panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">METRICS</span>
-                    <h2>Weather Details</h2>
-                  </div>
-                </div>
-                <div className="detail-stack">
-                  <div className="detail-item">
-                    <div className="detail-item-left">
-                      <span className="detail-item-label">UV Index</span>
-                      <span className="detail-item-sub">Peak today: {fmt(maxUv, 1)}</span>
+              {/* Column 2 Stack: 24-Hour PM2.5 Trend + Weather Details Grid */}
+              <div className="overview-right-stack">
+                <article className="panel trend-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <span className="eyebrow">TREND</span>
+                      <h2>24-Hour PM2.5</h2>
                     </div>
-                    <span className="detail-item-value">{fmt(activeWeather.uv_index, 0)} <small>({uvLabel(activeWeather.uv_index)})</small></span>
+                    <button
+                      className="icon-button"
+                      onClick={() => { setTab('History'); setMetric('pm25'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                      title="Open History tab"
+                    >
+                      <ArrowUpRight size={15} />
+                    </button>
                   </div>
+                  <div className="trend-summary">
+                    <span className="trend-stat">Current: <strong>{fmt(reading?.pm25)}</strong></span>
+                    <span className="trend-stat">Avg: <strong>{fmt(stats.pm_mean)}</strong></span>
+                    <span className="trend-stat">Peak: <strong>{fmt(stats.pm_max)}</strong></span>
+                  </div>
+                  <div className="trend-chart">
+                    {recentTrend.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={recentTrend} margin={{ top: 8, right: 4, bottom: 0, left: -25 }}>
+                          <defs>
+                            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#70d8c2" stopOpacity={0.3} />
+                              <stop offset="100%" stopColor="#70d8c2" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid stroke="#26313e" strokeDasharray="3 5" vertical={false} />
+                          <XAxis dataKey="ts" tickFormatter={t => time(t)} stroke="#7d8a9a" tickLine={false} axisLine={false} minTickGap={50} />
+                          <YAxis stroke="#7d8a9a" tickLine={false} axisLine={false} domain={[0, 'auto']} />
+                          <Tooltip contentStyle={{ background: '#1a2533', border: '1px solid #3c4c60', borderRadius: 8 }} labelFormatter={v => time(Number(v), true)} formatter={v => [fmt(Number(v)), 'µg/m³']} />
+                          <Area type="monotone" dataKey="pm25" name="PM2.5" stroke="#70d8c2" fill="url(#trendFill)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="empty-small">Waiting for recent readings to plot trend.</div>
+                    )}
+                  </div>
+                </article>
 
-                  <div className="detail-item">
-                    <div className="detail-item-left">
-                      <span className="detail-item-label">Precipitation</span>
-                      <span className="detail-item-sub">Max probability: {fmt(maxPrecip, 0)}%</span>
+                <article className="panel">
+                  <div className="panel-heading">
+                    <div>
+                      <span className="eyebrow">METRICS</span>
+                      <h2>Weather Details</h2>
                     </div>
-                    <span className="detail-item-value">{fmt(activeWeather.precipitation_probability, 0)}<small>%</small></span>
                   </div>
+                  <div className="detail-stack">
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">UV Index</span>
+                        <span className="detail-item-sub">Peak today: {fmt(maxUv, 1)}</span>
+                      </div>
+                      <span className="detail-item-value">{fmt(activeWeather.uv_index, 0)} <small>({uvLabel(activeWeather.uv_index)})</small></span>
+                    </div>
 
-                  <div className="detail-item">
-                    <div className="detail-item-left">
-                      <span className="detail-item-label">Wind</span>
-                      <span className="detail-item-sub">10m elevation</span>
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">Precipitation</span>
+                        <span className="detail-item-sub">Max probability: {fmt(maxPrecip, 0)}%</span>
+                      </div>
+                      <span className="detail-item-value">{fmt(activeWeather.precipitation_probability, 0)}<small>%</small></span>
                     </div>
-                    <span className="detail-item-value">{formatWind(activeWeather.wind_speed)} <small>{windUnit}</small></span>
-                  </div>
 
-                  <div className="detail-item">
-                    <div className="detail-item-left">
-                      <span className="detail-item-label">Humidex</span>
-                      <span className="detail-item-sub">Derived heat index</span>
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">Wind</span>
+                        <span className="detail-item-sub">10m elevation</span>
+                      </div>
+                      <span className="detail-item-value">{formatWind(activeWeather.wind_speed)} <small>{windUnit}</small></span>
                     </div>
-                    <span className="detail-item-value">
-                      {formatTemp(humidex(reading?.temperature ?? activeWeather.temperature, reading?.humidity ?? activeWeather.humidity))}
-                      <small>{tempUnit}</small>
-                    </span>
-                  </div>
 
-                  <div className="detail-item">
-                    <div className="detail-item-left">
-                      <span className="detail-item-label">Sun Cycle</span>
-                      <span className="detail-item-sub">Daylight duration</span>
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">Humidex</span>
+                        <span className="detail-item-sub">Derived heat index</span>
+                      </div>
+                      <span className="detail-item-value">
+                        {formatTemp(humidex(reading?.temperature ?? activeWeather.temperature, reading?.humidity ?? activeWeather.humidity))}
+                        <small>{tempUnit}</small>
+                      </span>
                     </div>
-                    <span className="detail-item-value" style={{ fontSize: '13px' }}>
-                      {todayDaily?.sunrise && todayDaily?.sunset
-                        ? `${Math.round(((todayDaily.sunset - todayDaily.sunrise) / 3600) * 10) / 10} hrs`
-                        : '—'}
-                    </span>
+
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">Cloud Cover</span>
+                        <span className="detail-item-sub">Sky opacity</span>
+                      </div>
+                      <span className="detail-item-value">
+                        {activeWeather.cloud_cover != null ? `${fmt(activeWeather.cloud_cover, 0)}%` : '—'}
+                      </span>
+                    </div>
+
+                    <div className="detail-item">
+                      <div className="detail-item-left">
+                        <span className="detail-item-label">Sun Cycle</span>
+                        <span className="detail-item-sub">Daylight duration</span>
+                      </div>
+                      <span className="detail-item-value" style={{ fontSize: '13px' }}>
+                        {todayDaily?.sunrise && todayDaily?.sunset
+                          ? `${Math.round(((todayDaily.sunset - todayDaily.sunrise) / 3600) * 10) / 10} hrs`
+                          : '—'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              </div>
             </section>
 
             {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
