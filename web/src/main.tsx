@@ -716,17 +716,6 @@ function App() {
               </div>
             </section>
 
-            {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
-            <React.Suspense fallback={<div className="panel"><div className="notice">Loading night sky observatory…</div></div>}>
-              <AstronomyPanel
-                data={astronomy}
-                loading={loading}
-                timezone={tz}
-                units={units}
-                onConfigureClick={() => setTab('System')}
-              />
-            </React.Suspense>
-
             {/* Bottom 3-Column Grid: 10-Day Forecast, 24h PM2.5 Trend, Weather Details */}
             <section className="overview-bottom-grid">
               {/* Column 1: 10-Day Outlook */}
@@ -867,6 +856,17 @@ function App() {
                 </div>
               </article>
             </section>
+
+            {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
+            <React.Suspense fallback={<div className="panel"><div className="notice">Loading night sky observatory…</div></div>}>
+              <AstronomyPanel
+                data={astronomy}
+                loading={loading}
+                timezone={tz}
+                units={units}
+                onConfigureClick={() => setTab('System')}
+              />
+            </React.Suspense>
           </>
         )}
 
