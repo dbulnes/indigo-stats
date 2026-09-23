@@ -1,5 +1,9 @@
 # Indigo Stats
+The purpose of this repo is to provide a private air and weather observatory. It is a React + TypeScript PWA, Python FastAPI, and SQLite, in one Unraid application container. An optional private HTTPS proxy provides PWA access over your tailnet. No Supabase, Google login, or public frontend hosting is required.
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/dbulnes/indigo-stats.svg)](https://hub.docker.com/r/dbulnes/indigo-stats)
+[![Docker Image Size](https://img.shields.io/docker/image-size/dbulnes/indigo-stats.svg)](https://hub.docker.com/r/dbulnes/indigo-stats)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/dbulnes/indigo-stats.svg)](https://hub.docker.com/r/dbulnes/indigo-stats)
 [![Build and test](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml/badge.svg)](https://github.com/dbulnes/indigo-stats/actions/workflows/check.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/dbulnes/indigo-stats/python-coverage-comment-action-data/endpoint.json)](https://github.com/dbulnes/indigo-stats/tree/python-coverage-comment-action-data)
 
