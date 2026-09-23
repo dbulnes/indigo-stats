@@ -35,7 +35,7 @@ type Forecast = {
   temp_min?: number | null
 }
 type Reading = { ts: number; temperature: number | null; humidity: number | null; pm25: number | null; aqi: number | null; pm_a: number | null; pm_b: number | null; method: string; quality: string; beyond_scale: boolean; temperature_raw: number | null; humidity_raw: number | null; environment_mode: string }
-type Latest = { reading: Reading | null; nowcast_aqi: number | null; nowcast_pm25: number | null; nowcast_beyond_scale: boolean; stale: boolean; server_time: number }
+type Latest = { reading: Reading | null; nowcast_aqi: number | null; nowcast_pm25: number | null; nowcast_beyond_scale: boolean; stale: boolean; server_time: number; today_temp_min?: number | null; today_temp_max?: number | null }
 type Stats = { samples: number; temp_min: number | null; temp_max: number | null; temp_mean: number | null; humidity_mean: number | null; pm_mean: number | null; pm_max: number | null; pm_min: number | null }
 type HistoryData = { points: Point[]; forecasts: Forecast[]; step: number; stats: Stats }
 type Status = { version: string; jobs: { name: string; last_attempt: number | null; last_success: number | null; error: string | null }[]; readings: { n: number; first: number | null; last: number | null }; database_bytes: number; timezone: string; backup_scope: string }
@@ -435,6 +435,29 @@ function App() {
 
   // Find daily sun cycle (matching today's date in local tz)
   const todayDateStr = useMemo(() => new Date(nowTs * 1000).toLocaleDateString('en-CA', { timeZone: tz }), [nowTs, tz])
+
+  const { todayMeasuredMin, todayMeasuredMax } = useMemo(() => {
+    let min = latest?.today_temp_min ?? null
+    let max = latest?.today_temp_max ?? null
+    if (min == null || max == null) {
+      for (const p of history.points) {
+        if (p.temperature == null) continue
+        const d = new Date(p.ts * 1000).toLocaleDateString('en-CA', { timeZone: tz })
+        if (d === todayDateStr) {
+          if (min == null || p.temperature < min) min = p.temperature
+          if (max == null || p.temperature > max) max = p.temperature
+        }
+      }
+    }
+    if (reading?.temperature != null) {
+      const readingDay = new Date(reading.ts * 1000).toLocaleDateString('en-CA', { timeZone: tz })
+      if (readingDay === todayDateStr) {
+        if (min == null || reading.temperature < min) min = reading.temperature
+        if (max == null || reading.temperature > max) max = reading.temperature
+      }
+    }
+    return { todayMeasuredMin: min, todayMeasuredMax: max }
+  }, [latest?.today_temp_min, latest?.today_temp_max, history.points, todayDateStr, tz, reading?.temperature, reading?.ts])
   const todayDaily = useMemo(() => {
     if (!dailyForecast.length) return null
     return dailyForecast.find(d => {
@@ -570,6 +593,11 @@ function App() {
                   <span><Droplets size={14} /> {fmt(reading?.humidity ?? activeWeather.humidity, 0)}% RH</span>
                   <span><Cloud size={14} /> {activeWeather.cloud_cover != null ? fmt(activeWeather.cloud_cover, 0) + '%' : '—'}</span>
                   <span><Sun size={14} /> UV {fmt(activeWeather.uv_index, 0)} ({uvLabel(activeWeather.uv_index)})</span>
+                  {(todayMeasuredMin != null || todayMeasuredMax != null) && (
+                    <span title="Today's measured temperature range">
+                      <Thermometer size={14} /> ↑ {todayMeasuredMax != null ? `${formatTemp(todayMeasuredMax)}°` : '—'} · ↓ {todayMeasuredMin != null ? `${formatTemp(todayMeasuredMin)}°` : '—'}
+                    </span>
+                  )}
                 </div>
 
                 {sunInfo ? (

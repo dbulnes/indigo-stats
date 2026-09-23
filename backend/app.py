@@ -217,12 +217,17 @@ def post_settings(data: dict, background_tasks: BackgroundTasks,
 def latest(environment:Literal['purpleair','raw','simple']|None=None):
     mode=environment or db.settings().get('environment_mode','purpleair')
     now=int(time.time())
+    timezone=ZoneInfo(db.settings().get('timezone','Etc/UTC'))
+    today_start=int(datetime.fromtimestamp(now,timezone).replace(hour=0,minute=0,second=0,microsecond=0).timestamp())
+    temp_expr,_=environment_sql(mode)
     with db.connect() as con:
         row=con.execute('SELECT * FROM readings ORDER BY ts DESC LIMIT 1').fetchone()
         current_hour=now//3600*3600
         hourly={r['hour']:r['pm'] for r in con.execute('''SELECT ts/3600*3600 hour,AVG(pm25) pm
             FROM readings WHERE ts>=? AND ts<? AND pm25 IS NOT NULL
             GROUP BY hour HAVING COUNT(*)>=45''',(current_hour-12*3600,current_hour))}
+        today_row=con.execute(f'''SELECT MIN({temp_expr}) as temp_min, MAX({temp_expr}) as temp_max
+            FROM readings WHERE ts>=? AND temperature_raw IS NOT NULL''',(today_start,)).fetchone()
     pm=nowcast([hourly.get(current_hour-3600*(i+1)) for i in range(12)])
     value=dict(row) if row else None
     if value:
@@ -230,8 +235,11 @@ def latest(environment:Literal['purpleair','raw','simple']|None=None):
         value['environment_mode']=mode
         value['aqi']=aqi(value['pm25'])
         value['beyond_scale']=value['pm25'] is not None and value['pm25']>325.4
+    t_min=float(today_row['temp_min']) if today_row and today_row['temp_min'] is not None else None
+    t_max=float(today_row['temp_max']) if today_row and today_row['temp_max'] is not None else None
     return dict(reading=value,nowcast_aqi=aqi(pm),nowcast_pm25=pm,nowcast_beyond_scale=pm is not None and pm>325.4,
-                stale=not row or now-row['ts']>180,server_time=now)
+                stale=not row or now-row['ts']>180,server_time=now,
+                today_temp_min=t_min,today_temp_max=t_max)
 
 def bounds(start,end):
     if end<=start or end-start>3660*86400:

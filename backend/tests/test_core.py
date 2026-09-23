@@ -280,6 +280,17 @@ class DatabaseTests(unittest.TestCase):
             self.assertTrue(latest['reading']['beyond_scale'])
             self.assertEqual(latest['reading']['aqi'], 500)
             self.assertEqual(latest['reading']['environment_mode'], 'purpleair')
+            # 80 F raw in purpleair mode: 1.0227 * 80 - 9.375 = 72.441
+            self.assertAlmostEqual(latest['today_temp_min'], 72.441, places=2)
+            self.assertAlmostEqual(latest['today_temp_max'], 72.441, places=2)
+
+            # Insert an earlier reading today with different temp
+            with db.connect() as con:
+                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 60, 50, 65, 50, 20, 'cf1', '', 'purpleair')", (now - 300,))
+            latest = client.get('/api/latest').json()
+            # 65 F raw: 1.0227 * 65 - 9.375 = 57.1005
+            self.assertAlmostEqual(latest['today_temp_min'], 57.1005, places=2)
+            self.assertAlmostEqual(latest['today_temp_max'], 72.441, places=2)
 
     def test_frontend_static_serving_and_404s(self):
         from fastapi.testclient import TestClient
