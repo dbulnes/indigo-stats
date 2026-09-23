@@ -306,6 +306,7 @@ function App() {
     : latest.stale
     ? 'Awaiting sensor'
     : 'Collecting every minute'
+  const compactConnectionLabel = connectionLabel === 'Collecting every minute' ? '1 min updates' : connectionLabel
 
   function getMetric(obj: any, m: Metric) {
     if (!obj) return null
@@ -539,9 +540,10 @@ function App() {
             <button className="unit-toggle" onClick={toggleUnits} title="Toggle between Imperial and Metric units">
               {units === 'imperial' ? '°F · mph' : '°C · km/h'}
             </button>
-            <span className={`live ${connectionTone}`} role="status" aria-live="polite">
+            <span className={`live ${connectionTone}`} role="status" aria-live="polite" aria-label={connectionLabel}>
               <i />
-              {connectionLabel}
+              <span className="live-label-full">{connectionLabel}</span>
+              <span className="live-label-compact">{compactConnectionLabel}</span>
             </span>
             <button className="icon-button" onClick={() => setTick(t => t + 1)} aria-label="Refresh readings" aria-busy={loading}>
               <RefreshCw size={16} className={loading ? 'spinning' : ''} />

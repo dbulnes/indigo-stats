@@ -449,6 +449,10 @@ h2 {
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
 }
 
+.live-label-compact {
+  display: none;
+}
+
 .live.healthy i {
   animation: status-breathe 2.4s ease-in-out infinite;
 }
@@ -1176,11 +1180,16 @@ tbody tr:hover {
   }
 
   .live {
-    max-width: 108px;
     padding-inline: 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .live-label-full {
+    display: none;
+  }
+
+  .live-label-compact {
+    display: inline;
   }
 
   .unit-toggle {
