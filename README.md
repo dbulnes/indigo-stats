@@ -6,7 +6,7 @@
 |----------------------------------------- | -------: | -------: | ------: | --------: |
 | backend/\_\_init\_\_.py                  |        0 |        0 |    100% |           |
 | backend/air.py                           |       76 |        0 |    100% |           |
-| backend/app.py                           |      230 |        4 |     98% |82, 312-314 |
+| backend/app.py                           |      236 |        4 |     98% |82, 320-322 |
 | backend/astronomy.py                     |      347 |       14 |     96% |24, 147, 274-275, 396, 590, 715-716, 718-719, 729, 731, 739, 741 |
 | backend/backups.py                       |      734 |        0 |    100% |           |
 | backend/config.py                        |       52 |        0 |    100% |           |
@@ -17,10 +17,10 @@
 | backend/tests/test\_backup\_api.py       |      166 |        0 |    100% |           |
 | backend/tests/test\_backup\_hardening.py |      231 |        0 |    100% |           |
 | backend/tests/test\_backups.py           |      528 |        0 |    100% |           |
-| backend/tests/test\_core.py              |      322 |        0 |    100% |           |
+| backend/tests/test\_core.py              |      329 |        0 |    100% |           |
 | backend/tests/test\_jobs.py              |       94 |        0 |    100% |           |
 | backend/tests/test\_manage.py            |       69 |        0 |    100% |           |
-| **TOTAL**                                | **3185** |   **19** | **99%** |           |
+| **TOTAL**                                | **3198** |   **19** | **99%** |           |
 
 
 ## Setup coverage badge
