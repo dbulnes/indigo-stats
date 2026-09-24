@@ -10,7 +10,7 @@ Unraid Community Applications metadata is maintained separately in [dbulnes/indi
 
 ## Privacy and host safety
 
-- Never commit a real street address, coordinates, sensor IP, homelab IP/hostname, tailnet URL, credentials, database, backup, or raw sensor payload.
+- Never commit a real street address, coordinates, sensor IP, PurpleAir API keys, homelab IP/hostname, tailnet URL, credentials, database, backup, or raw sensor payload.
 - Private configuration belongs in environment variables or the persistent SQLite settings table. Browser APIs and logs must not reveal it.
 - Do not deploy to, modify, scan, or remove anything from an Unraid server unless the user explicitly requests that host action in the current task.
 - Do not add SSH, Docker socket, privileged mode, host networking, automatic Tailscale configuration, or host service changes to the container.
@@ -80,7 +80,7 @@ Application-only releases do not require editing or resubmitting the CA reposito
 - Validates remote container state and `/api/health`. Full runbook codified in `.agents/skills/unraid-deploy/SKILL.md`.
 
 ### Unraid packaging synchronization
-Whenever new environment variables, secret files, path mounts, port mappings, or default behaviors are introduced in `indigo-stats` (such as offsite backup mounts `/offsite` or credentials `BACKUP_GOOGLE_*` and `BACKUP_S3_*`), the Unraid packaging repository ([dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid)) must be updated in tandem:
+Whenever new environment variables, secret files, path mounts, port mappings, or default behaviors are introduced in `indigo-stats` (such as sensor source `SENSOR_SOURCE`, `PURPLEAIR_SENSOR_INDEX` / `SENSOR_INDEX`, `PURPLEAIR_API_KEY`, `PURPLEAIR_READ_KEY`, offsite backup mounts `/offsite` or credentials `BACKUP_GOOGLE_*` and `BACKUP_S3_*`), the Unraid packaging repository ([dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid)) must be updated in tandem:
 1. Add `<Config>` entries in `templates/indigo-stats.xml` (use `Display="advanced"` for optional/expert settings, `Required="false"` for non-mandatory features, and `Mask="true"` for sensitive credentials).
 2. Update `<Date>` and `<Changes>` in `templates/indigo-stats.xml`.
 3. Update the configuration table in `README.md` of `indigo-stats-unraid`.

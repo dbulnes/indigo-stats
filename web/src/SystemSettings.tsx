@@ -68,45 +68,59 @@ export function SystemSettings() {
       
       let tz = settings.TZ
       try {
-        const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
+        const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
         const tzData = await tzRes.json()
-        tz = tzData.timezone
+        if (tzData.timezone) {
+          tz = tzData.timezone
+        }
       } catch {
-        // Fallback to configured timezone
+        // Fallback to existing or browser
       }
-      
-      setSettings(s => ({...s, FORECAST_LATITUDE: String(lat), FORECAST_LONGITUDE: String(lon), TZ: tz || s.TZ}))
-      setLookupState(`Selected ${r.text}. Auto-selected timezone: ${tz || 'None'}`)
-    } catch (e: unknown) {
-      setLookupState(`Error: ${e instanceof Error ? e.message : 'Lookup failed'}`)
+
+      setSettings(s => ({
+        ...s,
+        FORECAST_LATITUDE: lat.toFixed(4),
+        FORECAST_LONGITUDE: lon.toFixed(4),
+        TZ: tz,
+        FORECAST_ENABLED: 'true'
+      }))
+      setLookupState(`Found: ${lat.toFixed(4)}, ${lon.toFixed(4)} (${tz})`)
+    } catch {
+      setLookupState('Error resolving address candidates.')
     }
   }
 
-  const save = async (e:React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true); setMsg({text:'', type:''})
+    setSaving(true)
+    setMsg({text:'', type:''})
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
-        headers: {'Content-Type':'application/json', 'X-Indigo-Request':'1'},
+        headers: { 'Content-Type': 'application/json', 'X-Indigo-Request': '1' },
         body: JSON.stringify(settings)
       })
-      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to save')
-      setMsg({text:'Settings saved successfully. Changes may take a minute to apply.', type:'success'})
-    } catch (e: unknown) {
-      setMsg({text: e instanceof Error ? e.message : 'Failed to save', type:'error'})
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Failed to save settings')
+      }
+      setMsg({text: 'Settings updated successfully.', type: 'success'})
+    } catch (err: unknown) {
+      setMsg({text: (err as Error).message || 'Failed to save settings.', type: 'error'})
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
-  
-  const updateTimezone = async (lat: string, lon: string) => {
-    if (!lat || !lon) return
+
+  const updateTimezone = async (latStr: string, lonStr: string) => {
+    const lat = parseFloat(latStr)
+    const lon = parseFloat(lonStr)
+    if (isNaN(lat) || isNaN(lon)) return
     try {
-      const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`)
+      const tzRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&timezone=auto`)
       const tzData = await tzRes.json()
       if (tzData.timezone) {
-        setSettings(s => ({...s, TZ: tzData.timezone}))
-        setLookupState(`Auto-selected timezone: ${tzData.timezone}`)
+        setSettings(s => ({ ...s, TZ: tzData.timezone }))
       }
     } catch {
       // Ignore background errors
@@ -128,7 +142,54 @@ export function SystemSettings() {
     <span className="skeleton-line short" />
   </div>
   return <form onSubmit={save} className="settings-form">
-    <div className="form-group"><label>Sensor Host / IP</label><input name="SENSOR_HOST" value={settings.SENSOR_HOST||''} onChange={handleChange} placeholder="Update private IP..."/></div>
+    <div className="form-group">
+      <label>Sensor Source</label>
+      <select name="SENSOR_SOURCE" value={settings.SENSOR_SOURCE || 'local'} onChange={handleChange}>
+        <option value="local">Local network (Sensor IP)</option>
+        <option value="purpleair_api">PurpleAir API (Remote sensor)</option>
+      </select>
+    </div>
+
+    {(settings.SENSOR_SOURCE || 'local') === 'local' ? (
+      <div className="form-group">
+        <label>Sensor Host / IP</label>
+        <p className="settings-location-copy">
+          {settings.HAS_SENSOR_HOST === 'true' && !settings.SENSOR_HOST
+            ? 'Sensor IP is currently configured (hidden for privacy).'
+            : 'Set the private IPv4 address of your local PurpleAir sensor.'}
+        </p>
+        <input name="SENSOR_HOST" value={settings.SENSOR_HOST||''} onChange={handleChange} placeholder="Update private IP..."/>
+      </div>
+    ) : (
+      <>
+        <div className="form-group">
+          <label>PurpleAir Sensor Index</label>
+          <p className="settings-location-copy">
+            The numeric ID of the sensor from the PurpleAir map (e.g. 175253).
+          </p>
+          <input name="PURPLEAIR_SENSOR_INDEX" value={settings.PURPLEAIR_SENSOR_INDEX || ''} onChange={handleChange} placeholder="e.g. 175253" />
+        </div>
+        <div className="form-group">
+          <label>PurpleAir API Read Key</label>
+          <p className="settings-location-copy">
+            {settings.HAS_PURPLEAIR_API_KEY === 'true' && !settings.PURPLEAIR_API_KEY
+              ? 'API key is configured (hidden for privacy).'
+              : 'Required to access sensors via the PurpleAir API.'}
+          </p>
+          <input type="password" name="PURPLEAIR_API_KEY" value={settings.PURPLEAIR_API_KEY || ''} onChange={handleChange} placeholder="Enter PurpleAir API Read Key..." />
+        </div>
+        <div className="form-group">
+          <label>PurpleAir Sensor Read Key (Optional)</label>
+          <p className="settings-location-copy">
+            {settings.HAS_PURPLEAIR_READ_KEY === 'true' && !settings.PURPLEAIR_READ_KEY
+              ? 'Sensor read key is configured (hidden for privacy).'
+              : 'Only required if the sensor is configured as private on PurpleAir.'}
+          </p>
+          <input type="password" name="PURPLEAIR_READ_KEY" value={settings.PURPLEAIR_READ_KEY || ''} onChange={handleChange} placeholder="Optional private read key..." />
+        </div>
+      </>
+    )}
+
     <div className="form-group">
       <label>Timezone</label>
       <input list="timezones" name="TZ" value={settings.TZ||''} onChange={handleChange} placeholder="e.g. America/Los_Angeles"/>

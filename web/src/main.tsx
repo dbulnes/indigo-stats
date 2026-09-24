@@ -38,7 +38,7 @@ type Reading = { ts: number; temperature: number | null; humidity: number | null
 type Latest = { reading: Reading | null; nowcast_aqi: number | null; nowcast_pm25: number | null; nowcast_beyond_scale: boolean; stale: boolean; server_time: number; today_temp_min?: number | null; today_temp_max?: number | null }
 type Stats = { samples: number; temp_min: number | null; temp_max: number | null; temp_mean: number | null; humidity_mean: number | null; pm_mean: number | null; pm_max: number | null; pm_min: number | null }
 type HistoryData = { points: Point[]; forecasts: Forecast[]; step: number; stats: Stats }
-type Status = { version: string; jobs: { name: string; last_attempt: number | null; last_success: number | null; error: string | null }[]; readings: { n: number; first: number | null; last: number | null }; database_bytes: number; timezone: string; backup_scope: string }
+type Status = { version: string; jobs: { name: string; last_attempt: number | null; last_success: number | null; error: string | null }[]; readings: { n: number; first: number | null; last: number | null }; database_bytes: number; timezone: string; backup_scope: string; sensor_source?: string }
 
 const ranges = [
   { label: '1 hour', seconds: 3600 },
@@ -644,7 +644,7 @@ function App() {
                 <div className="panel-heading">
                   <div>
                     <span className="eyebrow">AIR QUALITY</span>
-                    <h2>Local Sensor</h2>
+                    <h2>{status?.sensor_source === 'purpleair_api' ? 'PurpleAir Sensor' : 'Local Sensor'}</h2>
                   </div>
                   <span className={`aqi-pill ${aqiClass(liveAqi ?? currentAqi)}`}>{category(liveAqi ?? currentAqi)}</span>
                 </div>
@@ -697,7 +697,7 @@ function App() {
                       )}
                     </span>
                   ) : (
-                    <span>Collecting from local sensor every minute.</span>
+                    <span>{status?.sensor_source === "purpleair_api" ? "Collecting from PurpleAir API every minute." : "Collecting from local sensor every minute."}</span>
                   )}
                 </div>
               </article>

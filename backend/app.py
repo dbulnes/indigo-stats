@@ -75,7 +75,7 @@ async def headers(request,call_next):
     response.headers['X-Content-Type-Options']='nosniff'
     response.headers['Referrer-Policy']='no-referrer'
     response.headers['X-Frame-Options']='DENY'
-    response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://geocode.arcgis.com https://api.open-meteo.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://geocode.arcgis.com https://api.open-meteo.com https://api.purpleair.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
     if request.url.path.startswith('/api/') or request.url.path in ('/sw.js','/index.html','/'):
         response.headers['Cache-Control']='no-store'
     elif request.url.path.startswith('/assets/'):
@@ -96,8 +96,10 @@ def status():
     backup = backups.public_status()
     scope = ('Local snapshots plus verified ' + backup['provider'].replace('_', ' ') + ' copies'
              if backup['enabled'] else 'Local snapshots only; off-server backup is disabled')
-    return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=db.settings().get('timezone','Etc/UTC'),
-                backup_scope=scope,version=APP_VERSION)
+    s = db.settings()
+    sensor_src = s.get('sensor_source', 'purpleair_api' if 'purpleair_sensor_index' in s and 'sensor_host' not in s else 'local')
+    return dict(jobs=jobs_status,readings=dict(counts),database_bytes=size,timezone=s.get('timezone','Etc/UTC'),
+                backup_scope=scope,sensor_source=sensor_src,version=APP_VERSION)
 
 @app.get('/api/backups')
 def backup_status():
@@ -187,13 +189,23 @@ def get_settings():
         'TZ': s.get('timezone'),
         'HAS_FORECAST_LOCATION': 'latitude' in s and 'longitude' in s,
         'UNITS': s.get('units', 'imperial'),
+        'SENSOR_SOURCE': s.get('sensor_source', 'purpleair_api' if 'purpleair_sensor_index' in s and 'sensor_host' not in s else 'local'),
+        'HAS_SENSOR_HOST': 'sensor_host' in s,
+        'HAS_PURPLEAIR_API_KEY': bool(s.get('purpleair_api_key') or os.getenv('PURPLEAIR_API_KEY') or os.getenv('PURPLEAIR_API_KEY_FILE')),
+        'HAS_PURPLEAIR_READ_KEY': bool(s.get('purpleair_read_key') or os.getenv('PURPLEAIR_READ_KEY') or os.getenv('PURPLEAIR_READ_KEY_FILE')),
+        'PURPLEAIR_SENSOR_INDEX': s.get('purpleair_sensor_index'),
     }
 
 @app.post('/api/settings')
 def post_settings(data: dict, background_tasks: BackgroundTasks,
                   _=Depends(require_browser_mutation)):
     update = {}
-    allowed = ['FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT', 'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS']
+    allowed = [
+        'FORECAST_ENABLED', 'PM_METHOD', 'ENVIRONMENT_MODE', 'SENSOR_PLACEMENT',
+        'TZ', 'FORECAST_LATITUDE', 'FORECAST_LONGITUDE', 'SENSOR_HOST', 'UNITS',
+        'PURPLEAIR_SENSOR_INDEX', 'SENSOR_INDEX', 'PURPLEAIR_API_KEY',
+        'PURPLEAIR_READ_KEY', 'SENSOR_SOURCE'
+    ]
     for env in allowed:
         if env in data and data[env] is not None and str(data[env]).strip() != '':
             key, cast = config.ENV_FIELDS[env]
@@ -211,6 +223,11 @@ def post_settings(data: dict, background_tasks: BackgroundTasks,
         'forecast_enabled' in update or 'latitude' in update or 'longitude' in update
     ):
         background_tasks.add_task(jobs.weather)
+    if (
+        'sensor_host' in update or 'purpleair_sensor_index' in update
+        or 'purpleair_api_key' in update or 'sensor_source' in update
+    ):
+        background_tasks.add_task(jobs.collect)
     return {'ok': True}
 
 @app.get('/api/latest')

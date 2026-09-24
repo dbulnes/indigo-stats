@@ -14,7 +14,11 @@ def main(argv=None, input_stream=None):
     db.initialize()
     if args.action=='configure':
         cfg=json.load(source)
-        allowed={'address','latitude','longitude','sensor_host','timezone','pm_method','placement','environment_mode','forecast_enabled','units'}
+        allowed={
+            'address','latitude','longitude','sensor_host','timezone','pm_method',
+            'placement','environment_mode','forecast_enabled','units',
+            'purpleair_sensor_index','purpleair_api_key','purpleair_read_key','sensor_source'
+        }
         if set(cfg)-allowed: raise SystemExit('Unknown configuration key')
         try: validated=validate(db.settings()|cfg)
         except (ValueError, TypeError, KeyError): raise SystemExit('Invalid private configuration') from None

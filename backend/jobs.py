@@ -1,6 +1,8 @@
 import asyncio
 import json
 import logging
+import os
+from pathlib import Path
 import time
 import httpx
 from . import db,backups
@@ -16,23 +18,83 @@ def store_reading(data,cfg,now):
 
 async def collect():
     cfg=await asyncio.to_thread(db.settings)
-    host=cfg.get('sensor_host')
-    if not host:
-        await asyncio.to_thread(db.status,'sensor','Sensor is not configured')
-        return
-    # Plain HTTP stays on the local network. Never log host, response, or request URL.
-    async with httpx.AsyncClient(timeout=httpx.Timeout(12,connect=4),trust_env=False,
-                                 headers={'Connection':'close'}) as client:
-        for attempt in range(3):
-            try:
-                response=await client.get(f'http://{host}/json')
-                response.raise_for_status()
-                await asyncio.to_thread(store_reading,response.json(),cfg,time.time())
-                break
-            except (httpx.HTTPError, ValueError):
-                if attempt == 2: raise
-                await asyncio.sleep(2*(attempt+1))
-    await asyncio.to_thread(db.status,'sensor',success=True)
+    source = cfg.get('sensor_source')
+    if source not in ('local', 'purpleair_api'):
+        if cfg.get('purpleair_sensor_index'):
+            source = 'purpleair_api'
+        elif cfg.get('sensor_host'):
+            source = 'local'
+        else:
+            await asyncio.to_thread(db.status, 'sensor', 'Sensor is not configured')
+            return
+
+    if source == 'purpleair_api':
+        sensor_index = cfg.get('purpleair_sensor_index')
+        if not sensor_index:
+            await asyncio.to_thread(db.status, 'sensor', 'PurpleAir sensor index is not configured')
+            return
+        api_key = cfg.get('purpleair_api_key') or os.environ.get('PURPLEAIR_API_KEY')
+        if not api_key:
+            key_file = os.environ.get('PURPLEAIR_API_KEY_FILE', '').strip()
+            if key_file:
+                try:
+                    api_key = Path(key_file).read_text(encoding='utf-8').strip()
+                except OSError:
+                    pass
+        if not api_key:
+            await asyncio.to_thread(db.status, 'sensor', 'PurpleAir API key is not configured')
+            return
+
+        read_key = cfg.get('purpleair_read_key') or os.environ.get('PURPLEAIR_READ_KEY')
+        if not read_key:
+            read_file = os.environ.get('PURPLEAIR_READ_KEY_FILE', '').strip()
+            if read_file:
+                try:
+                    read_key = Path(read_file).read_text(encoding='utf-8').strip()
+                except OSError:
+                    pass
+
+        headers = {'X-API-Key': api_key, 'Connection': 'close', 'User-Agent': 'Indigo-Stats'}
+        params = {}
+        if read_key:
+            params['read_key'] = read_key
+        url = f'https://api.purpleair.com/v1/sensors/{sensor_index}'
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15, connect=5), trust_env=False, headers=headers) as client:
+            for attempt in range(3):
+                try:
+                    response = await client.get(url, params=params)
+                    if response.status_code in (401, 403):
+                        await asyncio.to_thread(db.status, 'sensor', 'PurpleAir API key is invalid or unauthorized')
+                        return
+                    if response.status_code == 404:
+                        await asyncio.to_thread(db.status, 'sensor', f'PurpleAir sensor {sensor_index} was not found')
+                        return
+                    response.raise_for_status()
+                    await asyncio.to_thread(store_reading, response.json(), cfg, time.time())
+                    break
+                except (httpx.HTTPError, ValueError):
+                    if attempt == 2:
+                        raise
+                    await asyncio.sleep(2 * (attempt + 1))
+        await asyncio.to_thread(db.status, 'sensor', success=True)
+    else:
+        host=cfg.get('sensor_host')
+        if not host:
+            await asyncio.to_thread(db.status,'sensor','Sensor is not configured')
+            return
+        # Plain HTTP stays on the local network. Never log host, response, or request URL.
+        async with httpx.AsyncClient(timeout=httpx.Timeout(12,connect=4),trust_env=False,
+                                     headers={'Connection':'close'}) as client:
+            for attempt in range(3):
+                try:
+                    response=await client.get(f'http://{host}/json')
+                    response.raise_for_status()
+                    await asyncio.to_thread(store_reading,response.json(),cfg,time.time())
+                    break
+                except (httpx.HTTPError, ValueError):
+                    if attempt == 2: raise
+                    await asyncio.sleep(2*(attempt+1))
+        await asyncio.to_thread(db.status,'sensor',success=True)
 
 def _series_val(series, key, i, low=0, high=10000):
     vals = series.get(key)

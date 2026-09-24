@@ -15,7 +15,7 @@ A private air and weather observatory: React + TypeScript PWA, Python FastAPI, a
 
 ## What it does
 
-- Polls a local PurpleAir sensor every minute; stores temperature (°F), humidity, both PM2.5 channels, quality flags, and corrected PM2.5.
+- Polls a local PurpleAir sensor (via local network IP) or any remote PurpleAir sensor (via the PurpleAir API) every minute; stores temperature (°F), humidity, both PM2.5 channels, quality flags, and corrected PM2.5.
 - Calculates US AQI estimates using EPA 2024 breakpoints. Shows a PM2.5 NowCast once recent hourly data is sufficiently complete.
 - Optionally fetches hourly regional weather and air-quality forecasts from Open-Meteo; historical comparisons only use forecasts retrieved before their target hour.
 - Offers date ranges, zoom/time navigation, previous-period overlays, threshold inspection, daily patterns, CSV export, and collector/storage health.
@@ -64,7 +64,7 @@ The script always builds the ARM64 image and runs the full disposable smoke test
 
 Community Applications metadata is maintained separately in [dbulnes/indigo-stats-unraid](https://github.com/dbulnes/indigo-stats-unraid). This repository owns the application source, Dockerfile, runtime documentation, tests, and image release workflow. The packaging repository owns the Unraid template, icon, CA profile, packaging license, and submission documentation.
 
-When a public image is available, install it through Unraid using the separate template. Choose a dedicated persistent local appdata directory, enter your sensor's LAN IPv4 address and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Publishing the image alone does not replace users' running containers; Unraid detects the new `latest` digest as an available update. The maintainer release script separately updates its configured Unraid host by default after verification.
+When a public image is available, install it through Unraid using the separate template. Choose a dedicated persistent local appdata directory, configure your sensor source (local sensor IPv4 address or PurpleAir API sensor index and API read key) and timezone, and select measurement methods. Container replacement must retain the same `/data` mapping. Publishing the image alone does not replace users' running containers; Unraid detects the new `latest` digest as an available update. The maintainer release script separately updates its configured Unraid host by default after verification.
 
 Forecasts default to disabled. To enable them, provide both private coordinates and set `FORECAST_ENABLED=true`. Coordinates are sent to Open-Meteo. Coordinates and raw sensor network metadata are omitted from dashboard APIs. Private settings are stored in SQLite; environment settings supplied on startup take precedence. Removing an environment value does not erase a stored setting; explicitly disable forecasts to stop requests.
 
