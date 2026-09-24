@@ -1,7 +1,8 @@
 [run]
+relative_files = true
 source = backend
 omit =
     backend/tests/*
 
 [report]
-show_missing = True
+show_missing = true
