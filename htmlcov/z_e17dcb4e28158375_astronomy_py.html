@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for backend/astronomy.py: 96%</title>
+    <title>Coverage for backend/astronomy.py: 100%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
     <script src="coverage_html_cb_dd2e7eb5.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>backend<span class="sep">/</span>astronomy.py</b>:
-            <span class="pc_cov">96%</span>
+            <span class="pc_cov">100%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">347 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">333<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">14<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">347<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_e17dcb4e28158375_backups_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-24 00:07 +0000
+            created at 2026-09-24 02:06 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -103,7 +103,7 @@
     <p class="pln"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t"><span class="key">def</span> <span class="nam">_norm_rad</span><span class="op">(</span><span class="nam">rad</span><span class="op">:</span> <span class="nam">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">float</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">    <span class="str">&quot;&quot;&quot;Normalize angle in radians to [0, 2*pi).&quot;&quot;&quot;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="key">return</span> <span class="nam">rad</span> <span class="op">%</span> <span class="op">(</span><span class="num">2.0</span> <span class="op">*</span> <span class="nam">math</span><span class="op">.</span><span class="nam">pi</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t24" href="#t24">24</a></span><span class="t">    <span class="key">return</span> <span class="nam">rad</span> <span class="op">%</span> <span class="op">(</span><span class="num">2.0</span> <span class="op">*</span> <span class="nam">math</span><span class="op">.</span><span class="nam">pi</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t25" href="#t25">25</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t26" href="#t26">26</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t27" href="#t27">27</a></span><span class="t"><span class="key">def</span> <span class="nam">julian_day</span><span class="op">(</span><span class="nam">ts</span><span class="op">:</span> <span class="nam">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">float</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -226,7 +226,7 @@
     <p class="run"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">    <span class="key">for</span> <span class="nam">start</span><span class="op">,</span> <span class="nam">end</span><span class="op">,</span> <span class="nam">name</span> <span class="key">in</span> <span class="nam">zodiac_boundaries</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">        <span class="key">if</span> <span class="nam">start</span> <span class="op">&lt;=</span> <span class="nam">ra_deg</span> <span class="op">&lt;</span> <span class="nam">end</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">            <span class="key">return</span> <span class="nam">name</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="key">return</span> <span class="str">&#x27;Pisces&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="key">return</span> <span class="str">&#x27;Pisces&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t"><span class="key">def</span> <span class="nam">moon_position_details</span><span class="op">(</span><span class="nam">ts</span><span class="op">:</span> <span class="nam">float</span><span class="op">,</span> <span class="nam">lat_deg</span><span class="op">:</span> <span class="nam">float</span><span class="op">,</span> <span class="nam">lon_deg</span><span class="op">:</span> <span class="nam">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="nam">Dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -353,8 +353,8 @@
     <p class="run"><span class="n"><a id="t271" href="#t271">271</a></span><span class="t">            <span class="nam">phase_name</span> <span class="op">=</span> <span class="str">&#x27;Waxing Crescent&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t272" href="#t272">272</a></span><span class="t">            <span class="nam">phase_code</span> <span class="op">=</span> <span class="str">&#x27;waxing_crescent&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t273" href="#t273">273</a></span><span class="t">        <span class="key">elif</span> <span class="nam">k_illum</span> <span class="op">&lt;=</span> <span class="num">0.52</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">            <span class="nam">phase_name</span> <span class="op">=</span> <span class="str">&#x27;First Quarter&#x27;</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">            <span class="nam">phase_code</span> <span class="op">=</span> <span class="str">&#x27;first_quarter&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t274" href="#t274">274</a></span><span class="t">            <span class="nam">phase_name</span> <span class="op">=</span> <span class="str">&#x27;First Quarter&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t275" href="#t275">275</a></span><span class="t">            <span class="nam">phase_code</span> <span class="op">=</span> <span class="str">&#x27;first_quarter&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t276" href="#t276">276</a></span><span class="t">        <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t277" href="#t277">277</a></span><span class="t">            <span class="nam">phase_name</span> <span class="op">=</span> <span class="str">&#x27;Waxing Gibbous&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t278" href="#t278">278</a></span><span class="t">            <span class="nam">phase_code</span> <span class="op">=</span> <span class="str">&#x27;waxing_gibbous&#x27;</span>&nbsp;</span><span class="r"></span></p>
@@ -475,7 +475,7 @@
     <p class="run run2"><span class="n"><a id="t393" href="#t393">393</a></span><span class="t">            <span class="nam">math</span><span class="op">.</span><span class="nam">cos</span><span class="op">(</span><span class="nam">lat_rad</span><span class="op">)</span> <span class="op">*</span> <span class="nam">math</span><span class="op">.</span><span class="nam">cos</span><span class="op">(</span><span class="nam">dec_rad</span><span class="op">)</span> <span class="op">+</span> <span class="num">1e-12</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t394" href="#t394">394</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t395" href="#t395">395</a></span><span class="t">        <span class="key">if</span> <span class="nam">cos_h0</span> <span class="op">&lt;</span> <span class="op">-</span><span class="num">1.0</span> <span class="key">or</span> <span class="nam">cos_h0</span> <span class="op">&gt;</span> <span class="num">1.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">            <span class="key">return</span> <span class="key">None</span>  <span class="com"># Midnight sun or polar night</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t396" href="#t396">396</a></span><span class="t">            <span class="key">return</span> <span class="key">None</span>  <span class="com"># Midnight sun or polar night</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t397" href="#t397">397</a></span><span class="t">        <span class="nam">h0_deg</span> <span class="op">=</span> <span class="nam">math</span><span class="op">.</span><span class="nam">acos</span><span class="op">(</span><span class="nam">cos_h0</span><span class="op">)</span> <span class="op">*</span> <span class="nam">RAD_TO_DEG</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t398" href="#t398">398</a></span><span class="t">        <span class="com"># Local solar noon in GST: LST = RA_sun =&gt; GMST = RA_sun - lon</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t399" href="#t399">399</a></span><span class="t">        <span class="nam">noon_gmst</span> <span class="op">=</span> <span class="nam">_norm_deg</span><span class="op">(</span><span class="nam">ra_sun</span> <span class="op">-</span> <span class="nam">lon_deg</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -669,7 +669,7 @@
     <p class="pln"><span class="n"><a id="t587" href="#t587">587</a></span><span class="t">        <span class="com"># Check if radiant is visible from this latitude (radiant peak alt &gt; 5&#176;)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t588" href="#t588">588</a></span><span class="t">        <span class="nam">peak_alt</span> <span class="op">=</span> <span class="num">90.0</span> <span class="op">-</span> <span class="nam">abs</span><span class="op">(</span><span class="nam">lat_deg</span> <span class="op">-</span> <span class="nam">radiant_dec</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t589" href="#t589">589</a></span><span class="t">        <span class="key">if</span> <span class="nam">peak_alt</span> <span class="op">&lt;</span> <span class="num">5.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t">            <span class="key">continue</span>  <span class="com"># Radiant never rises high enough</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t590" href="#t590">590</a></span><span class="t">            <span class="key">continue</span>  <span class="com"># Radiant never rises high enough</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t591" href="#t591">591</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t592" href="#t592">592</a></span><span class="t">        <span class="com"># Compute peak timestamp for current or upcoming cycle</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t593" href="#t593">593</a></span><span class="t">        <span class="nam">peak_dt</span> <span class="op">=</span> <span class="nam">datetime</span><span class="op">(</span><span class="nam">curr_year</span><span class="op">,</span> <span class="nam">pm</span><span class="op">,</span> <span class="nam">pd</span><span class="op">,</span> <span class="num">22</span><span class="op">,</span> <span class="num">0</span><span class="op">,</span> <span class="nam">tzinfo</span><span class="op">=</span><span class="nam">timezone</span><span class="op">.</span><span class="nam">utc</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -794,11 +794,11 @@
     <p class="run"><span class="n"><a id="t712" href="#t712">712</a></span><span class="t">        <span class="nam">score</span> <span class="op">+=</span> <span class="num">3.0</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t713" href="#t713">713</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="str">&#x27;Moon below horizon (dark sky)&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t714" href="#t714">714</a></span><span class="t">    <span class="key">elif</span> <span class="nam">illum</span> <span class="op">&lt;</span> <span class="num">25.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t715" href="#t715">715</a></span><span class="t">        <span class="nam">score</span> <span class="op">+=</span> <span class="num">2.0</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t716" href="#t716">716</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="fst">f&#x27;</span><span class="op">{</span><span class="nam">int</span><span class="op">(</span><span class="nam">illum</span><span class="op">)</span><span class="op">}</span><span class="fst">% thin crescent (minimal glare)</span><span class="fst">&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t715" href="#t715">715</a></span><span class="t">        <span class="nam">score</span> <span class="op">+=</span> <span class="num">2.0</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t716" href="#t716">716</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="fst">f&#x27;</span><span class="op">{</span><span class="nam">int</span><span class="op">(</span><span class="nam">illum</span><span class="op">)</span><span class="op">}</span><span class="fst">% thin crescent (minimal glare)</span><span class="fst">&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t717" href="#t717">717</a></span><span class="t">    <span class="key">elif</span> <span class="nam">illum</span> <span class="op">&lt;</span> <span class="num">60.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t718" href="#t718">718</a></span><span class="t">        <span class="nam">score</span> <span class="op">+=</span> <span class="num">0.5</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t719" href="#t719">719</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="fst">f&#x27;</span><span class="op">{</span><span class="nam">int</span><span class="op">(</span><span class="nam">illum</span><span class="op">)</span><span class="op">}</span><span class="fst">% phase (moderate moonlight)</span><span class="fst">&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t718" href="#t718">718</a></span><span class="t">        <span class="nam">score</span> <span class="op">+=</span> <span class="num">0.5</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t719" href="#t719">719</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="fst">f&#x27;</span><span class="op">{</span><span class="nam">int</span><span class="op">(</span><span class="nam">illum</span><span class="op">)</span><span class="op">}</span><span class="fst">% phase (moderate moonlight)</span><span class="fst">&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t720" href="#t720">720</a></span><span class="t">    <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t721" href="#t721">721</a></span><span class="t">        <span class="nam">score</span> <span class="op">-=</span> <span class="num">2.0</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t722" href="#t722">722</a></span><span class="t">        <span class="nam">moon_desc</span> <span class="op">=</span> <span class="fst">f&#x27;</span><span class="op">{</span><span class="nam">int</span><span class="op">(</span><span class="nam">illum</span><span class="op">)</span><span class="op">}</span><span class="fst">% bright moon (washes out deep sky)</span><span class="fst">&#x27;</span>&nbsp;</span><span class="r"></span></p>
@@ -808,9 +808,9 @@
     <p class="run"><span class="n"><a id="t726" href="#t726">726</a></span><span class="t">        <span class="key">if</span> <span class="nam">cloud_cover</span> <span class="op">&lt;=</span> <span class="num">15.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t727" href="#t727">727</a></span><span class="t">            <span class="nam">score</span> <span class="op">+=</span> <span class="num">2.0</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t728" href="#t728">728</a></span><span class="t">        <span class="key">elif</span> <span class="nam">cloud_cover</span> <span class="op">&lt;=</span> <span class="num">40.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t729" href="#t729">729</a></span><span class="t">            <span class="nam">score</span> <span class="op">+=</span> <span class="num">0.5</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t729" href="#t729">729</a></span><span class="t">            <span class="nam">score</span> <span class="op">+=</span> <span class="num">0.5</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t730" href="#t730">730</a></span><span class="t">        <span class="key">elif</span> <span class="nam">cloud_cover</span> <span class="op">&lt;=</span> <span class="num">70.0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t731" href="#t731">731</a></span><span class="t">            <span class="nam">score</span> <span class="op">-=</span> <span class="num">1.5</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t731" href="#t731">731</a></span><span class="t">            <span class="nam">score</span> <span class="op">-=</span> <span class="num">1.5</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t732" href="#t732">732</a></span><span class="t">        <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t733" href="#t733">733</a></span><span class="t">            <span class="nam">score</span> <span class="op">-=</span> <span class="num">4.0</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t734" href="#t734">734</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -818,9 +818,9 @@
     <p class="run"><span class="n"><a id="t736" href="#t736">736</a></span><span class="t">    <span class="key">if</span> <span class="nam">final_score</span> <span class="op">&gt;=</span> <span class="num">8</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t737" href="#t737">737</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Excellent&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t738" href="#t738">738</a></span><span class="t">    <span class="key">elif</span> <span class="nam">final_score</span> <span class="op">&gt;=</span> <span class="num">6</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t739" href="#t739">739</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Good&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t739" href="#t739">739</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Good&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t740" href="#t740">740</a></span><span class="t">    <span class="key">elif</span> <span class="nam">final_score</span> <span class="op">&gt;=</span> <span class="num">4</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t741" href="#t741">741</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Fair&#x27;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t741" href="#t741">741</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Fair&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t742" href="#t742">742</a></span><span class="t">    <span class="key">else</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t743" href="#t743">743</a></span><span class="t">        <span class="nam">rating</span> <span class="op">=</span> <span class="str">&#x27;Poor&#x27;</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t744" href="#t744">744</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -888,7 +888,7 @@
             <a class="nav" href="z_e17dcb4e28158375_backups_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.15.4">coverage.py v7.15.4</a>,
-            created at 2026-09-24 00:07 +0000
+            created at 2026-09-24 02:06 +0000
         </p>
     </div>
 </footer>
