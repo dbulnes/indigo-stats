@@ -267,13 +267,13 @@ class DatabaseTests(unittest.TestCase):
         import time
         from fastapi.testclient import TestClient
         from backend.app import app, APP_VERSION
-        with patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
+        fixed_now = 1750000000  # Fixed midday timestamp to avoid midnight rollover races
+        with patch('backend.app.time.time', return_value=fixed_now), patch.dict('os.environ', {'DISABLE_JOBS': '1'}), TestClient(app) as client:
             h = client.get('/api/health')
             self.assertEqual(h.status_code, 200)
             self.assertEqual(h.json(), {'ok': True, 'version': APP_VERSION})
-            now = int(time.time())
             with db.connect() as con:
-                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 75, 45, 80, 40, 350, 'cf1', '', 'purpleair')", (now,))
+                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 75, 45, 80, 40, 350, 'cf1', '', 'purpleair')", (fixed_now,))
             latest = client.get('/api/latest').json()
             self.assertFalse(latest['stale'])
             self.assertIsNotNone(latest['reading'])
@@ -286,7 +286,7 @@ class DatabaseTests(unittest.TestCase):
 
             # Insert an earlier reading today with different temp
             with db.connect() as con:
-                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 60, 50, 65, 50, 20, 'cf1', '', 'purpleair')", (now - 300,))
+                con.execute("INSERT INTO readings(ts, source_ts, temperature, humidity, temperature_raw, humidity_raw, pm25, method, quality, environment_mode) VALUES (?, '', 60, 50, 65, 50, 20, 'cf1', '', 'purpleair')", (fixed_now - 300,))
             latest = client.get('/api/latest').json()
             # 65 F raw: 1.0227 * 65 - 9.375 = 57.1005
             self.assertAlmostEqual(latest['today_temp_min'], 57.1005, places=2)
