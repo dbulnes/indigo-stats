@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="900" viewBox="0 0 1000 900" font-size="14" role="img" aria-labelledby="title desc">
+<title id="title">C — Comparison grid: compact all-day clothing dashboard</title>
+<desc id="desc">Static comparison table with periods as columns and five clothing groups as rows, followed by independent accessory usefulness and a grouped generation footer. Synthetic results only.</desc>
+<defs><style>text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#e8edf5}.muted{fill:#9aabc0}.small{font-size:12px}.micro{font-size:11px;letter-spacing:1px}.purple{fill:#c2b5ff}.mint{fill:#70d8c2}.rule{stroke:#2b384b}.pct{fill:#c2b5ff;font-size:12px}</style></defs>
+<rect width="1000" height="900" fill="#101723"/>
+<rect x="30" y="28" width="30" height="30" rx="10" fill="#8c7ad5"/><text x="39" y="49" font-size="20">i</text><text x="72" y="50" font-size="23" font-weight="600">indigo<tspan fill="#ad9cff">.</tspan></text><text x="203" y="48" class="micro muted">YOUR ENVIRONMENT</text>
+<rect x="744" y="30" width="226" height="28" rx="14" fill="#25253d"/><text x="857" y="48" text-anchor="middle" class="small purple">Illustrative UI · synthetic results</text><path d="M30 78H970" class="rule"/>
+<text x="32" y="111" class="micro purple">C / COMPARISON GRID</text><text x="32" y="151" font-size="30" font-weight="500">See what changes.</text><text x="32" y="178" class="muted">One shared set of labels. Every period in view. Compare a group across the day.</text>
+<rect x="30" y="204" width="940" height="643" rx="16" fill="#172130" stroke="#2b3646"/>
+<text x="52" y="240" font-size="20">What to wear today</text>
+<rect x="615" y="219" width="203" height="31" rx="7" fill="#101a27"/><rect x="619" y="223" width="98" height="23" rx="4" fill="#303c51"/><text x="632" y="239" class="small">Top preferences</text><text x="732" y="239" class="small muted">All rankings</text><text x="842" y="239" class="small mint">● Saved 07:10</text>
+<!-- Shared header with distinct period accents. -->
+<rect x="208" y="266" width="247" height="123" rx="8" fill="#212940"/><rect x="462" y="266" width="240" height="123" rx="8" fill="#282c36"/><rect x="709" y="266" width="240" height="123" rx="8" fill="#25273c"/>
+<text x="52" y="296" class="micro muted">TODAY</text><text x="52" y="318" class="small muted">Local time</text><text x="52" y="365" class="small muted">Forecast 07:00</text>
+<text x="226" y="293" font-size="17">Morning <tspan font-size="12" class="muted">06–11</tspan></text><text x="226" y="319" class="small muted">Cool + rainy</text><text x="226" y="348" font-size="24">50–56°F</text><text x="226" y="373" class="small muted">Rain 80% · Wind 12 mph</text>
+<text x="480" y="293" font-size="17">Afternoon <tspan font-size="12" class="muted">11–17</tspan></text><text x="480" y="319" class="small muted">Warmer + clearing</text><text x="480" y="348" font-size="24">62–68°F</text><text x="480" y="373" class="small muted">Rain 15% · Wind 8 mph</text>
+<text x="727" y="293" font-size="17">Evening <tspan font-size="12" class="muted">17–23</tspan></text><text x="727" y="319" class="small muted">Cool + breezy</text><text x="727" y="348" font-size="24">51–58°F</text><text x="727" y="373" class="small muted">Rain 20% · Wind 11 mph</text>
+<text x="52" y="419" class="micro muted">RELATIVE PREFERENCE</text><text x="948" y="419" text-anchor="end" class="small muted">Select a cell to explore alternatives ›</text>
+<path d="M50 432H950" class="rule"/>
+<rect x="50" y="433" width="900" height="47" fill="#192536"/>
+<text x="63" y="462" class="muted">Bottoms</text><text x="226" y="462">Long trousers <tspan class="pct">72%</tspan></text><text x="480" y="462">Light trousers <tspan class="pct">59%</tspan></text><text x="727" y="462">Long trousers <tspan class="pct">70%</tspan></text>
+<text x="63" y="509" class="muted">Base tops</text><text x="226" y="509">Long-sleeve shirt <tspan class="pct">64%</tspan></text><text x="480" y="509">Short-sleeve shirt <tspan class="pct">73%</tspan></text><text x="727" y="509">Long-sleeve shirt <tspan class="pct">69%</tspan></text>
+<rect x="50" y="527" width="900" height="47" fill="#192536"/>
+<text x="63" y="556" class="muted">Midlayers</text><text x="226" y="556">Light fleece <tspan class="pct">61%</tspan></text><text x="480" y="556">No midlayer <tspan class="pct">68%</tspan></text><text x="727" y="556">Light fleece <tspan class="pct">65%</tspan></text>
+<text x="63" y="603" class="muted">Outerwear</text><text x="226" y="603">Rain shell <tspan class="pct">81%</tspan></text><text x="480" y="603">No outerwear <tspan class="pct">66%</tspan></text><text x="727" y="603">Windbreaker <tspan class="pct">62%</tspan></text>
+<rect x="50" y="621" width="900" height="47" fill="#192536"/>
+<text x="63" y="650" class="muted">Footwear</text><text x="226" y="650">Waterproof shoes <tspan class="pct">76%</tspan></text><text x="480" y="650">Breathable trainers <tspan class="pct">78%</tspan></text><text x="727" y="650">Closed shoes <tspan class="pct">71%</tspan></text>
+<path d="M208 432V668M462 432V668M709 432V668" stroke="#2a3545"/>
+<text x="52" y="696" class="micro muted">ESTIMATED USEFULNESS</text>
+<text x="63" y="726" class="small muted">Umbrella</text><text x="226" y="726" class="mint">86%</text><rect x="273" y="719" width="144" height="4" rx="2" fill="#27394a"/><rect x="273" y="719" width="124" height="4" rx="2" fill="#70d8c2"/><text x="480" y="726" class="muted">14%</text><rect x="527" y="719" width="137" height="4" rx="2" fill="#27394a"/><rect x="527" y="719" width="19" height="4" rx="2" fill="#789aa4"/><text x="727" y="726" class="muted">21%</text><rect x="774" y="719" width="137" height="4" rx="2" fill="#27394a"/><rect x="774" y="719" width="29" height="4" rx="2" fill="#789aa4"/>
+<text x="63" y="755" class="small muted">Beanie / gloves</text><text x="226" y="755" class="small muted">24% / 9%</text><text x="480" y="755" class="small muted">4% / 2%</text><text x="727" y="755" class="small muted">32% / 12%</text>
+<path d="M50 775H950" class="rule"/>
+<text x="52" y="799" class="small muted">Percentages compare options within a group. Accessories are independent estimates.</text>
+<text x="52" y="824" class="small muted">Not measured comfort or a guaranteed outfit.</text><text x="702" y="824" class="small purple">› Methodology + weather details</text>
+<rect x="30" y="861" width="940" height="0" fill="none"/>
+<!-- Action footer intentionally grouped below the comparison panel. -->
+<rect x="30" y="861" width="113" height="30" rx="7" fill="#a99ae9"/><text x="86" y="881" text-anchor="middle" style="fill:#141b29;font-weight:600">Generate</text>
+<text x="160" y="881" class="small">↻ Refresh saved</text><text x="309" y="872" font-size="11" class="muted">TypeSafe (direct) · reported tokens: 1,240 in / 186 out</text><text x="309" y="889" font-size="11" class="muted">Only Generate can spend credits. Opening and refreshing never generate.</text>
+<text x="795" y="881" class="small purple">Setup / settings</text><text x="968" y="881" text-anchor="end" class="small purple">03 / 03</text>
+</svg>
