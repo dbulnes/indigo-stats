@@ -11,6 +11,7 @@ const SystemSettings = React.lazy(() => import('./SystemSettings').then(m => ({ 
 const BackupSettings = React.lazy(() => import('./BackupSettings').then(m => ({ default: m.BackupSettings })))
 const AstronomyPanel = React.lazy(() => import('./AstronomyPanel').then(m => ({ default: m.AstronomyPanel })))
 import type { AstronomyData } from './AstronomyPanel'
+import { ClothingPanel } from './ClothingPanel'
 import { weatherCondition, uvLabel, toC, toKmh } from './weather'
 import './style.css'
 
@@ -895,6 +896,8 @@ function App() {
                 </article>
               </div>
             </section>
+
+            <ClothingPanel timezone={tz} units={units} />
 
             {/* Night Sky & Celestial Observatory Panel (Option 4: Hybrid Hub) */}
             <React.Suspense fallback={<div className="panel"><div className="notice">Loading night sky observatory…</div></div>}>

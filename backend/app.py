@@ -11,6 +11,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Qu
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from . import db,jobs,config,backups,astronomy
+from . import clothing
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
@@ -104,6 +105,28 @@ def status():
 @app.get('/api/backups')
 def backup_status():
     return backups.public_status()
+
+@app.get('/api/clothing')
+def clothing_status():
+    return clothing.public_status()
+
+
+@app.put('/api/clothing')
+def clothing_config(data: dict, _=Depends(require_browser_mutation)):
+    try:
+        clothing.configure(data)
+    except clothing.ClothingError as error:
+        raise HTTPException(error.status, str(error)) from None
+    return clothing.public_status()
+
+
+@app.post('/api/clothing/generate')
+def clothing_generate(data: dict, _=Depends(require_browser_mutation)):
+    try:
+        return clothing.generate(data)
+    except clothing.ClothingError as error:
+        raise HTTPException(error.status, str(error)) from None
+
 
 @app.put('/api/backups')
 def configure_backups(data: dict, _=Depends(require_browser_mutation)):
@@ -220,7 +243,7 @@ def post_settings(data: dict, background_tasks: BackgroundTasks,
         raise HTTPException(400, str(e))
     db.set_settings(update)
     if (merged.get('forecast_enabled') and 'latitude' in merged and 'longitude' in merged) and (
-        'forecast_enabled' in update or 'latitude' in update or 'longitude' in update
+        'forecast_enabled' in update or 'latitude' in update or 'longitude' in update or 'timezone' in update
     ):
         background_tasks.add_task(jobs.weather)
     if (
