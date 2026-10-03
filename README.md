@@ -22,6 +22,12 @@ A private air and weather observatory: React + TypeScript PWA, Python FastAPI, a
 - Keeps minute history indefinitely by default. Raw sensor payloads expire after 30 days. Monitor actual disk usage.
 - Makes consistent daily SQLite snapshots, retaining 14 locally, and can reconcile verified copies to one S3, Google Drive, or host-mounted filesystem destination with 30-copy remote retention.
 
+## Optional clothing recommendations
+
+Clothing recommendations are manual-only: review the provider and consent to sending weather context and possible API spend before requesting a ranking. Opening or refreshing the dashboard does not request paid recommendations. Recent PurpleAir readings and existing forecasts provide context; Jev ranks clothing, not future weather. Layers are judged independently, not assembled into a coherent outfit.
+
+The initial provider is **jevmodel.org**, an independent service at `https://jevmodel.org/v1/systemone` using `jev-latest`, not the TypeSafe service. Provider selection and cached results persist in SQLite. Enter the key in the masked Unraid template input; the backend reads `CLOTHING_JEVMODEL_API_KEY` (or `CLOTHING_TYPESAFE_API_KEY` for direct TypeSafe) from the container environment, never from this dashboard or SQLite. See [clothing setup, privacy, and usage](docs/clothing-recommendations.md) before enabling requests, or use the [isolated local container trial](docs/clothing-local-test.md).
+
 ## Architecture and persistence
 
 The image contains code and frontend assets. All mutable state is under `/data`, which must be bound to a persistent **local** Unraid appdata directory. Replacing the image does not replace the database. Mount the entire directory, including SQLite WAL/SHM files. Do not use an SMB/NFS mount for the live database.

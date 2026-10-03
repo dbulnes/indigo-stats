@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -13,8 +14,18 @@ log=logging.getLogger('indigo')
 def store_reading(data,cfg,now):
     row=normalize(data,cfg,now)
     with db.connect() as con:
-        con.execute('INSERT OR IGNORE INTO readings ('+','.join(row)+') VALUES ('+','.join('?' for _ in row)+')',list(row.values()))
+        inserted = con.execute('INSERT OR IGNORE INTO readings ('+','.join(row)+') VALUES ('+','.join('?' for _ in row)+')',list(row.values())).rowcount
         con.execute('INSERT OR IGNORE INTO raw_samples VALUES (?,?)',(row['ts'],json.dumps(data)))
+        if inserted:
+            marker = {'context': sensor_context(cfg), 'ts': row['ts']}
+            con.execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+                        ('clothing_sensor_source', json.dumps(marker)))
+
+
+def sensor_context(cfg):
+    return hashlib.sha256(json.dumps(
+        {k: cfg.get(k) for k in ('sensor_source', 'sensor_host', 'purpleair_sensor_index', 'placement')},
+        sort_keys=True).encode()).hexdigest()
 
 async def collect():
     cfg=await asyncio.to_thread(db.settings)
@@ -155,13 +166,27 @@ async def weather():
                         None, None, None,
                         sunrise, sunset,
                         dval('temperature_2m_min',-100,200)))
-            await asyncio.to_thread(store_forecasts,rows)
+            await asyncio.to_thread(store_forecasts,rows,cfg if kind=='weather' else None)
     await asyncio.to_thread(db.status,'weather',success=True)
 
-def store_forecasts(rows):
+def forecast_context(cfg):
+    """Identity of the configuration used for a weather fetch, never sent to AI."""
+    return hashlib.sha256(json.dumps(
+        {k: cfg.get(k) for k in ('latitude', 'longitude', 'timezone')}, sort_keys=True).encode()).hexdigest()
+
+
+def store_forecasts(rows, cfg=None):
     padded = [r + (None,)*(16-len(r)) if len(r) < 16 else r for r in rows]
     with db.connect() as con:
+        if cfg is not None and padded:
+            fetched = padded[0][0]
+            # Same-second fetches must replace the whole batch, not mix locations.
+            con.execute("DELETE FROM forecasts WHERE fetched=? AND kind IN ('weather','daily')", (fetched,))
         con.executemany('INSERT OR REPLACE INTO forecasts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',padded)
+        if cfg is not None and padded:
+            marker = {'context': forecast_context(cfg), 'fetched': fetched}
+            con.execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+                        ('clothing_weather_source', json.dumps(marker)))
 
 def maintenance():
     now=int(time.time())

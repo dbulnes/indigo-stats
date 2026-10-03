@@ -1,0 +1,19 @@
+.clothing-panel { margin-block: 1.5rem; overflow-wrap: anywhere; }
+.clothing-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+.clothing-actions label { display: grid; gap: .4rem; max-width: 100%; color: #aeb9c9; font-size: 12px; }
+.clothing-actions select { max-width: 100%; min-height: 40px; padding: 8px; font: inherit; color: #d2dbea; background: #101a27; border: 1px solid #3b4a60; border-radius: 5px; }
+.clothing-actions button { min-height: 40px; }
+.clothing-actions :disabled { cursor: not-allowed; }
+.clothing-panel select:focus-visible, .clothing-period summary:focus-visible { outline: 2px solid #a79bff; outline-offset: 4px; }
+.clothing-periods { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; }
+.clothing-period { min-width: 0; border-top: 1px solid #2b3646; padding-top: .75rem; font-size: 12px; line-height: 1.7; }
+.clothing-period h3 { text-transform: capitalize; font-size: 15px; font-weight: 500; }
+.clothing-period h4 { margin-bottom: .4rem; font-size: 13px; }
+.clothing-period li::first-letter { text-transform: uppercase; }
+.clothing-period details { margin-block: .6rem; }
+.clothing-period summary { cursor: pointer; padding-block: .35rem; }
+.clothing-panel [role="status"]:empty { display: none; }
+@media (max-width: 450px) {
+  .clothing-actions label, .clothing-actions select { width: 100%; }
+  .clothing-actions button { flex: 1 1 auto; justify-content: center; }
+}
