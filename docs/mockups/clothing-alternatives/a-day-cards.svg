@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="900" viewBox="0 0 1000 900" font-size="14" role="img" aria-labelledby="title desc">
+<title id="title">A — Day cards: recommended clothing panel concept</title>
+<desc id="desc">Static Indigo Stats design with three side-by-side period cards, independent clothing group preferences and accessory usefulness estimates. All weather, recommendations and usage are synthetic.</desc>
+<defs>
+  <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#1b2637"/><stop offset="1" stop-color="#151e2c"/></linearGradient>
+  <style>text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#e8edf5}.muted{fill:#9aabc0}.small{font-size:12px}.micro{font-size:11px;letter-spacing:1.1px}.value{font-size:15px;font-weight:550}.purple{fill:#c2b5ff}.mint{fill:#70d8c2}.rule{stroke:#2b384b}.pct{fill:#c2b5ff;font-size:14px;text-anchor:end}</style>
+  <g id="rain" fill="none" stroke="#a9b9d7" stroke-width="1.8" stroke-linecap="round"><path d="M6 20h22a7 7 0 0 0 0-14 10 10 0 0 0-19-1A8 8 0 0 0 6 20Z"/><path d="m10 25-2 4m10-4-2 4m10-4-2 4" stroke="#a99aeb"/></g>
+  <g id="sun" fill="none" stroke="#e4bd86" stroke-width="1.8" stroke-linecap="round"><circle cx="17" cy="16" r="7"/><path d="M17 2v3m0 22v3M3 16h3m22 0h3M7 6l2 2m16 16 2 2M7 26l2-2M25 8l2-2"/></g>
+  <g id="moon" fill="none" stroke="#b9acf2" stroke-width="1.8"><path d="M25 23A14 14 0 0 1 13 2a14 14 0 1 0 12 21Z"/></g>
+</defs>
+<rect width="1000" height="900" fill="#101723"/>
+<rect x="30" y="28" width="30" height="30" rx="10" fill="#8c7ad5"/><text x="39" y="49" font-size="20">i</text>
+<text x="72" y="50" font-size="23" font-weight="600">indigo<tspan fill="#ad9cff">.</tspan></text>
+<text x="203" y="48" class="micro muted">YOUR ENVIRONMENT</text>
+<rect x="744" y="30" width="226" height="28" rx="14" fill="#25253d"/><text x="857" y="48" text-anchor="middle" class="small purple">Illustrative UI · synthetic results</text>
+<path d="M30 78H970" class="rule"/>
+<text x="32" y="111" class="micro purple">A / DAY CARDS</text>
+<text x="32" y="151" font-size="30" font-weight="500">What to wear today</text>
+<text x="32" y="178" class="muted">A quick read for your whole day. Explore alternatives only when you need them.</text>
+<rect x="804" y="124" width="164" height="32" rx="16" fill="#203733"/><text x="886" y="145" text-anchor="middle" class="small mint">Recommended direction</text>
+<rect x="30" y="203" width="940" height="651" rx="16" fill="url(#bg)" stroke="#2b3646"/>
+<text x="52" y="234" class="small muted">TODAY · LOCAL TIME</text><circle cx="729" cy="229" r="3" fill="#70d8c2"/><text x="740" y="234" class="small muted">Saved 07:10 · forecast 07:00</text>
+<!-- Three equally weighted, self-contained cards. -->
+<g transform="translate(50 252)">
+<rect width="288" height="427" rx="12" fill="#131e2d" stroke="#39455e"/>
+<use href="#rain" x="228" y="20"/><text x="18" y="30" font-size="18" font-weight="550">Morning</text><text x="18" y="51" class="small muted">06–11 · Cool + rainy</text>
+<text x="18" y="84" font-size="27">50–56°<tspan font-size="13" class="muted"> F</tspan></text><text x="18" y="106" class="small muted">Feels 47–53° · Rain 80% · Wind 12 mph</text>
+<path d="M18 124H270" class="rule"/><text x="18" y="145" class="micro muted">TOP RELATIVE PREFERENCE</text>
+<text x="18" y="171" class="small muted">Bottoms</text><text x="18" y="191" class="value">Long trousers</text><text x="270" y="191" class="pct">72%</text>
+<text x="18" y="216" class="small muted">Base tops</text><text x="18" y="236" class="value">Long-sleeve shirt</text><text x="270" y="236" class="pct">64%</text>
+<text x="18" y="261" class="small muted">Midlayers</text><text x="18" y="281" class="value">Light fleece</text><text x="270" y="281" class="pct">61%</text>
+<text x="18" y="306" class="small muted">Outerwear</text><text x="18" y="326" class="value">Rain shell</text><text x="270" y="326" class="pct">81%</text>
+<text x="18" y="351" class="small muted">Footwear</text><text x="18" y="371" class="value">Waterproof shoes</text><text x="270" y="371" class="pct">76%</text>
+<path d="M18 388H270" class="rule"/><text x="18" y="411" class="small purple">› Explore alternatives</text>
+</g>
+<g transform="translate(356 252)">
+<rect width="288" height="427" rx="12" fill="#131e2d" stroke="#2b384b"/>
+<use href="#sun" x="228" y="20"/><text x="18" y="30" font-size="18" font-weight="550">Afternoon</text><text x="18" y="51" class="small muted">11–17 · Warmer + clearing</text>
+<text x="18" y="84" font-size="27">62–68°<tspan font-size="13" class="muted"> F</tspan></text><text x="18" y="106" class="small muted">Feels 61–67° · Rain 15% · Wind 8 mph</text>
+<path d="M18 124H270" class="rule"/><text x="18" y="145" class="micro muted">TOP RELATIVE PREFERENCE</text>
+<text x="18" y="171" class="small muted">Bottoms</text><text x="18" y="191" class="value">Light trousers</text><text x="270" y="191" class="pct">59%</text>
+<text x="18" y="216" class="small muted">Base tops</text><text x="18" y="236" class="value">Short-sleeve shirt</text><text x="270" y="236" class="pct">73%</text>
+<text x="18" y="261" class="small muted">Midlayers</text><text x="18" y="281" class="value">No midlayer</text><text x="270" y="281" class="pct">68%</text>
+<text x="18" y="306" class="small muted">Outerwear</text><text x="18" y="326" class="value">No outerwear</text><text x="270" y="326" class="pct">66%</text>
+<text x="18" y="351" class="small muted">Footwear</text><text x="18" y="371" class="value">Breathable trainers</text><text x="270" y="371" class="pct">78%</text>
+<path d="M18 388H270" class="rule"/><text x="18" y="411" class="small purple">› Explore alternatives</text>
+</g>
+<g transform="translate(662 252)">
+<rect width="288" height="427" rx="12" fill="#131e2d" stroke="#2b384b"/>
+<use href="#moon" x="228" y="20"/><text x="18" y="30" font-size="18" font-weight="550">Evening</text><text x="18" y="51" class="small muted">17–23 · Cool + breezy</text>
+<text x="18" y="84" font-size="27">51–58°<tspan font-size="13" class="muted"> F</tspan></text><text x="18" y="106" class="small muted">Feels 48–55° · Rain 20% · Wind 11 mph</text>
+<path d="M18 124H270" class="rule"/><text x="18" y="145" class="micro muted">TOP RELATIVE PREFERENCE</text>
+<text x="18" y="171" class="small muted">Bottoms</text><text x="18" y="191" class="value">Long trousers</text><text x="270" y="191" class="pct">70%</text>
+<text x="18" y="216" class="small muted">Base tops</text><text x="18" y="236" class="value">Long-sleeve shirt</text><text x="270" y="236" class="pct">69%</text>
+<text x="18" y="261" class="small muted">Midlayers</text><text x="18" y="281" class="value">Light fleece</text><text x="270" y="281" class="pct">65%</text>
+<text x="18" y="306" class="small muted">Outerwear</text><text x="18" y="326" class="value">Windbreaker</text><text x="270" y="326" class="pct">62%</text>
+<text x="18" y="351" class="small muted">Footwear</text><text x="18" y="371" class="value">Closed shoes</text><text x="270" y="371" class="pct">71%</text>
+<path d="M18 388H270" class="rule"/><text x="18" y="411" class="small purple">› Explore alternatives</text>
+</g>
+<text x="52" y="703" class="small muted">Accessories · estimated usefulness</text>
+<g font-size="11">
+<rect x="50" y="716" width="288" height="29" rx="7" fill="#213039"/><text x="62" y="735" class="small mint">Umbrella 86% · Beanie 24% · Gloves 9%</text>
+<rect x="356" y="716" width="288" height="29" rx="7" fill="#1c2938"/><text x="368" y="735" class="small muted">Umbrella 14% · Beanie 4% · Gloves 2%</text>
+<rect x="662" y="716" width="288" height="29" rx="7" fill="#1c2938"/><text x="674" y="735" class="small muted">Umbrella 21% · Beanie 32% · Gloves 12%</text>
+</g>
+<text x="52" y="771" class="small muted">Within-group preferences, not measured comfort or a guaranteed outfit.</text><text x="790" y="771" class="small purple">› How to read this</text>
+<path d="M30 790H970" class="rule"/>
+<rect x="50" y="805" width="114" height="33" rx="7" fill="#a99ae9"/><text x="107" y="827" text-anchor="middle" style="fill:#141b29;font-weight:600">Generate</text>
+<text x="182" y="827" class="small">↻ Refresh saved</text><text x="334" y="820" class="small muted">TypeSafe (direct) · reported tokens: 1,240 in / 186 out</text><text x="334" y="837" font-size="11" class="muted">Only Generate can spend credits. Opening and refreshing never generate.</text><text x="826" y="827" class="small purple">Setup / settings</text>
+<text x="32" y="881" class="small muted">Light outdoor activity · average sensitivity · AI guidance, not a safety forecast</text><text x="968" y="881" text-anchor="end" class="small purple">01 / 03</text>
+</svg>
