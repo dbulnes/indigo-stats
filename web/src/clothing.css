@@ -1,19 +1,109 @@
-.clothing-panel { margin-block: 1.5rem; overflow-wrap: anywhere; }
-.clothing-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
-.clothing-actions label { display: grid; gap: .4rem; max-width: 100%; color: #aeb9c9; font-size: 12px; }
-.clothing-actions select { max-width: 100%; min-height: 40px; padding: 8px; font: inherit; color: #d2dbea; background: #101a27; border: 1px solid #3b4a60; border-radius: 5px; }
-.clothing-actions button { min-height: 40px; }
-.clothing-actions :disabled { cursor: not-allowed; }
-.clothing-panel select:focus-visible, .clothing-period summary:focus-visible { outline: 2px solid #a79bff; outline-offset: 4px; }
-.clothing-periods { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; }
-.clothing-period { min-width: 0; border-top: 1px solid #2b3646; padding-top: .75rem; font-size: 12px; line-height: 1.7; }
-.clothing-period h3 { text-transform: capitalize; font-size: 15px; font-weight: 500; }
-.clothing-period h4 { margin-bottom: .4rem; font-size: 13px; }
-.clothing-period li::first-letter { text-transform: uppercase; }
-.clothing-period details { margin-block: .6rem; }
-.clothing-period summary { cursor: pointer; padding-block: .35rem; }
-.clothing-panel [role="status"]:empty { display: none; }
-@media (max-width: 450px) {
-  .clothing-actions label, .clothing-actions select { width: 100%; }
-  .clothing-actions button { flex: 1 1 auto; justify-content: center; }
+.clothing-panel {
+  --clothing-muted: #a1b2c8;
+  --clothing-accent: #c6baff;
+  margin-block: 1.5rem;
+  overflow-wrap: anywhere;
+  container-type: inline-size;
+}
+.clothing-panel h2, .clothing-panel h3, .clothing-panel h4, .clothing-panel p { margin: 0; }
+.clothing-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.clothing-heading h2 { font-size: 20px; letter-spacing: -.5px; }
+.clothing-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #79dfcb; white-space: nowrap; }
+.clothing-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.clothing-badge.is-stale { color: #edc997; }
+.clothing-panel .clothing-intro { margin-top: 8px; color: var(--clothing-muted); font-size: 12px; line-height: 1.6; }
+.clothing-tabs { display: flex; gap: 4px; padding: 5px; margin: 20px 0; background: #101a27; border-radius: 9px; }
+.clothing-tabs button {
+  flex: 1; min-width: 0; border: 0; border-radius: 6px; background: none; text-align: left;
+  padding: 11px 14px; color: var(--clothing-muted); display: grid; gap: 5px; font-size: 13px;
+}
+.clothing-tabs button:hover { background: #202c3c; }
+.clothing-tabs button[aria-selected="true"] { color: var(--clothing-accent); background: #302d48; }
+.clothing-tabs small { color: var(--clothing-muted); font-size: 11px; line-height: 1.5; }
+.clothing-panel .notice { margin: 12px 0; }
+.clothing-weather { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 3px 0 20px; border-bottom: 1px solid #2b3646; }
+.clothing-weather h3 { font-size: 26px; font-weight: 500; letter-spacing: -.6px; }
+.clothing-weather p { color: var(--clothing-muted); font-size: 12px; line-height: 1.8; margin-top: 6px; }
+.clothing-snapshot { display: grid; gap: 7px; text-align: right; color: var(--clothing-muted); font-size: 11px; line-height: 1.6; flex-shrink: 0; }
+.clothing-section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 17px 0 8px; }
+.clothing-section-heading h4 { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--clothing-muted); font-weight: 500; }
+.clothing-section-heading > span { font-size: 11px; color: var(--clothing-muted); }
+.clothing-ranking { border-bottom: 1px solid #293647; }
+.clothing-ranking summary {
+  list-style: none; display: grid; grid-template-columns: 100px minmax(0, 1fr) 145px 14px;
+  align-items: center; gap: 14px; min-height: 52px; padding: 12px 8px; cursor: pointer;
+}
+.clothing-ranking summary::-webkit-details-marker { display: none; }
+.clothing-ranking summary:hover { background: #202c3c; border-radius: 7px; }
+.clothing-group-label { font-size: 12px; color: var(--clothing-muted); }
+.clothing-choice { font-size: 13px; line-height: 1.5; }
+.clothing-score { display: flex; align-items: center; justify-content: flex-end; gap: 9px; font-size: 12px; color: var(--clothing-accent); font-variant-numeric: tabular-nums; }
+.clothing-score > span:last-child { width: 36px; text-align: right; flex-shrink: 0; }
+.clothing-bar { height: 5px; width: 100px; border-radius: 4px; background: #344155; overflow: hidden; }
+.clothing-bar > span { display: block; height: 100%; border-radius: inherit; background: #b1a0ee; }
+.clothing-chevron { color: var(--clothing-accent); }
+.clothing-ranking[open] { background: #252d43; border-radius: 8px; border-color: transparent; }
+.clothing-ranking[open] .clothing-chevron { transform: rotate(90deg); }
+.clothing-ranking[open] .clothing-group-label { color: var(--clothing-accent); }
+.clothing-ranking ul { list-style: none; padding: 0 36px 12px 122px; margin: 0; display: grid; gap: 12px; }
+.clothing-ranking li { display: grid; grid-template-columns: minmax(0, 1fr) 145px; align-items: center; gap: 14px; font-size: 12px; line-height: 1.5; color: var(--clothing-muted); }
+.clothing-ranking li .clothing-bar > span { background: #7785a5; }
+.clothing-panel .clothing-unavailable { padding: 16px 8px; font-size: 12px; color: var(--clothing-muted); border-bottom: 1px solid #293647; }
+.clothing-panel .clothing-accessory-heading { font-size: 12px; font-weight: 500; margin-top: 18px; color: var(--clothing-muted); }
+.clothing-accessory-heading span { font-weight: 400; }
+.clothing-accessories { display: flex; flex-wrap: wrap; gap: 9px; padding: 0; margin: 12px 0 18px; list-style: none; }
+.clothing-accessories li { background: #20303d; border-radius: 20px; padding: 8px 13px; color: var(--clothing-muted); font-size: 12px; }
+.clothing-accessories li > span { text-transform: capitalize; }
+.clothing-accessories strong { font-weight: 500; color: #79dfcb; margin-left: 3px; }
+.clothing-panel .clothing-caveat { color: var(--clothing-muted); font-size: 11px; line-height: 1.7; }
+.clothing-methodology, .clothing-settings { color: var(--clothing-muted); font-size: 12px; line-height: 1.8; }
+.clothing-methodology > summary, .clothing-settings > summary { color: var(--clothing-accent); cursor: pointer; padding: 10px 0; min-height: 40px; }
+.clothing-methodology p, .clothing-settings p { margin: 9px 0; }
+.clothing-methodology ul { padding-left: 18px; }
+.clothing-methodology li + li { margin-top: 5px; }
+.clothing-controls { border-top: 1px solid #2b3646; margin-top: 14px; padding-top: 18px; }
+.clothing-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.clothing-actions button { min-height: 40px; border-radius: 7px; padding: 10px 16px; font-size: 12px; display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+.clothing-generate { border: 1px solid #ac99ef; background: #ad9be8; color: #131c2b; font-weight: 650; }
+.clothing-generate:hover:not(:disabled) { background: #c1b2f5; }
+.clothing-refresh { background: transparent; color: #dae3ef; border: 1px solid transparent; }
+.clothing-refresh:hover:not(:disabled) { background: #202c3c; border-color: #344155; }
+.clothing-panel :disabled { cursor: not-allowed; }
+.clothing-panel .clothing-consent { margin-top: 12px; color: var(--clothing-muted); font-size: 11px; line-height: 1.8; max-width: 78ch; }
+.clothing-consent strong { font-weight: 500; color: #d2dbea; }
+.clothing-panel .clothing-usage { margin-top: 8px; color: var(--clothing-muted); font-size: 11px; line-height: 1.7; }
+.clothing-usage strong { color: #d2dbea; font-weight: 500; font-variant-numeric: tabular-nums; }
+.clothing-panel .clothing-context-note, .clothing-panel .clothing-activity { margin: 10px 0; font-size: 12px; line-height: 1.7; color: #edc997; }
+.clothing-panel .clothing-activity { color: var(--clothing-accent); }
+.clothing-settings { margin-top: 5px; }
+.clothing-settings > summary { display: flex; gap: 8px; align-items: center; width: fit-content; list-style: none; }
+.clothing-settings > summary::-webkit-details-marker { display: none; }
+.clothing-settings label { display: grid; gap: 6px; max-width: 350px; margin: 8px 0 12px; }
+.clothing-settings select { width: 100%; min-height: 40px; padding: 8px; font: inherit; color: #d2dbea; background: #101a27; border: 1px solid #3b4a60; border-radius: 6px; }
+.clothing-settings code { overflow-wrap: anywhere; }
+.clothing-panel :is(button, select, summary, h2, [role="tabpanel"]):focus-visible { outline: 2px solid #a79bff; outline-offset: 3px; }
+.clothing-empty { padding: 24px 8px; }
+.clothing-empty h3 { font-size: 15px; font-weight: 500; }
+.clothing-empty p { margin-top: 8px; color: var(--clothing-muted); font-size: 12px; line-height: 1.8; max-width: 60ch; }
+@container (max-width: 580px) {
+  .clothing-weather { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .clothing-snapshot { text-align: left; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .clothing-ranking summary { grid-template-columns: 85px minmax(0, 1fr) 45px 12px; gap: 8px; }
+  .clothing-ranking ul { padding-left: 101px; padding-right: 28px; }
+  .clothing-ranking li { grid-template-columns: minmax(0, 1fr) 45px; gap: 8px; }
+  .clothing-bar { display: none; }
+}
+@container (max-width: 400px) {
+  .clothing-heading h2 { font-size: 18px; }
+  .clothing-tabs button { padding: 10px 8px; font-size: 12px; }
+  .clothing-tabs small { font-size: 10px; }
+  .clothing-section-heading > span { display: none; }
+  .clothing-ranking summary { grid-template-columns: minmax(0, 1fr) 42px 12px; gap: 5px 8px; }
+  .clothing-group-label { grid-column: 1 / -1; font-size: 11px; }
+  .clothing-choice { grid-column: 1; }
+  .clothing-ranking ul { padding-left: 8px; padding-right: 28px; }
+  .clothing-accessories { gap: 6px; }
+  .clothing-accessories li { padding: 7px 10px; font-size: 11px; }
+  .clothing-actions { gap: 4px; }
+  .clothing-actions button { padding-inline: 12px; }
 }

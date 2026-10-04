@@ -44,6 +44,8 @@ jobs:
       - name: Build TypeScript frontend and PWA
         run: npm ci && npm run build
         working-directory: web
+      - name: Test clothing UI with synthetic weather
+        run: CHROME_BIN="$(command -v google-chrome)" npm run test:clothing --prefix web
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build native container image
