@@ -125,7 +125,10 @@ To bump the version without releasing, use `node scripts/bump-version.mjs <major
 ```sh
 .venv/bin/python -m unittest discover -s backend/tests -v
 npm run build --prefix web
+npm run test:clothing --prefix web
 ```
+
+The clothing browser test uses local headless Chrome, synthetic weather, and mocked provider responses; no API key or provider request is involved. On macOS it uses the standard Google Chrome application path. Elsewhere, set `CHROME_BIN` to the Chrome executable (CI uses `google-chrome`). It checks desktop/mobile layout, accessible tabs, configured-timezone period completion, cache and failure states, and manual-only generation.
 
 Tests cover AQI boundaries, channel correction, NowCast missing hours, duplicate ingestion, private-setting isolation, export pagination, forecast look-ahead prevention, local and remote backup integrity, remote reconciliation, and schema rollback protection.
 

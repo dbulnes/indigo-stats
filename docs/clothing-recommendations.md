@@ -25,6 +25,8 @@ Each eligible period has eight judgments:
 
 Relative preference is not a proven probability of comfort. Accessory estimated usefulness is also a model judgment, not a comfort or protection guarantee. Assume ordinary errands/light outdoor walking and average temperature sensitivity. Base tops assume removable layers can be added; midlayers assume a comfortable base top and an uninsulated protective shell if needed; outerwear assumes a base top and ordinary light midlayer in cool weather, not a heavy insulating midlayer. Layers are judged independently and may not form a coherent outfit. Use personal comfort, activity, and current conditions to decide what to wear.
 
+The dashboard shows one period at a time. Choose a remaining period tab, then open a clothing group to compare its alternatives. Weather sources and layer assumptions are in the methodology disclosure; provider selection is under **Setup / settings**. Tabs and disclosures never make provider requests. **Generate** still prepares all remaining periods, reusing matching cached results—not only the selected tab.
+
 ## API keys in the Unraid template
 
 No new mounts or ports are needed. Provider keys are optional container environment variables, configured through masked Unraid template inputs:
