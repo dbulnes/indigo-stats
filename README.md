@@ -2,18 +2,19 @@
 
 [Full report](https://htmlpreview.github.io/?https://github.com/dbulnes/indigo-stats/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
-| Name                    |    Stmts |     Miss |    Cover |   Missing |
-|------------------------ | -------: | -------: | -------: | --------: |
-| backend/\_\_init\_\_.py |        0 |        0 |     100% |           |
-| backend/air.py          |       95 |        0 |     100% |           |
-| backend/app.py          |      240 |        0 |     100% |           |
-| backend/astronomy.py    |      347 |        0 |     100% |           |
-| backend/backups.py      |      734 |        0 |     100% |           |
-| backend/config.py       |       86 |        0 |     100% |           |
-| backend/db.py           |       80 |        0 |     100% |           |
-| backend/jobs.py         |      156 |        0 |     100% |           |
-| backend/manage.py       |       38 |        0 |     100% |           |
-| **TOTAL**               | **1776** |    **0** | **100%** |           |
+| Name                    |    Stmts |     Miss |   Cover |   Missing |
+|------------------------ | -------: | -------: | ------: | --------: |
+| backend/\_\_init\_\_.py |        0 |        0 |    100% |           |
+| backend/air.py          |       95 |        0 |    100% |           |
+| backend/app.py          |      257 |        5 |     98% |   116-120 |
+| backend/astronomy.py    |      347 |        0 |    100% |           |
+| backend/backups.py      |      734 |        0 |    100% |           |
+| backend/clothing.py     |      217 |        7 |     97% |71, 88, 185, 237, 246, 318, 326 |
+| backend/config.py       |       86 |        0 |    100% |           |
+| backend/db.py           |       80 |        0 |    100% |           |
+| backend/jobs.py         |      170 |        0 |    100% |           |
+| backend/manage.py       |       38 |        0 |    100% |           |
+| **TOTAL**               | **2024** |   **12** | **99%** |           |
 
 
 ## Setup coverage badge
