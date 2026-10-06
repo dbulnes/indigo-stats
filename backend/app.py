@@ -15,7 +15,7 @@ from . import clothing
 from .air import aqi,nowcast,environment_values,environment_sql
 from typing import Literal
 
-APP_VERSION = '0.8.0'
+APP_VERSION = '0.9.0'
 SCHEDULES = (
     ('sensor', jobs.collect, 60),
     ('weather', jobs.weather, 3600),
