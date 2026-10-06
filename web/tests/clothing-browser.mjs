@@ -137,26 +137,29 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`
   profile = await mkdtemp(join(tmpdir(), 'indigo-clothing-browser-'))
+  let chromeStderr = ''
   chrome = spawn(process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', [
     '--headless=new', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1',
     `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check',
-    '--disable-background-networking', '--disable-component-update', 'about:blank',
-  ], { stdio: 'ignore' })
+    '--disable-background-networking', '--disable-component-update',
+    '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', 'about:blank',
+  ], { stdio: ['ignore', 'ignore', 'pipe'] })
+  chrome.stderr?.on('data', chunk => { chromeStderr += chunk })
   let launchError
   chrome.on('error', error => { launchError = error })
   let port
-  const deadline = Date.now() + 10000
+  const deadline = Date.now() + 30000
   while (Date.now() < deadline) {
     if (launchError) throw launchError
-    if (chrome.exitCode !== null) throw new Error(`Chrome exited: ${chrome.exitCode}`)
+    if (chrome.exitCode !== null) throw new Error(`Chrome exited: ${chrome.exitCode}\\n${chromeStderr}`)
     try { port = Number((await readFile(join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]); break } catch {}
     await sleep(100)
   }
-  assert.ok(port, 'Chrome CDP startup exceeded 10 seconds; set CHROME_BIN to a local Chrome binary')
-  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5000) })).json()
+  assert.ok(port, `Chrome CDP startup exceeded 30 seconds; set CHROME_BIN to a local Chrome binary\\n${chromeStderr}`)
+  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(10000) })).json()
   socket = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl)
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('CDP WebSocket startup timeout')), 5000)
+    const timer = setTimeout(() => reject(new Error('CDP WebSocket startup timeout')), 10000)
     socket.addEventListener('open', () => { clearTimeout(timer); resolve() }, { once: true })
     socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('CDP WebSocket error')) }, { once: true })
   })
