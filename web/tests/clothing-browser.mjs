@@ -42,6 +42,7 @@ const fresh = () => ({
 })
 let status = fresh()
 let failRead = false
+let appTimezone = 'UTC'
 const requests = []
 const unexpected = []
 const server = createServer(async (req, res) => {
@@ -61,7 +62,7 @@ const server = createServer(async (req, res) => {
         data = status
       } else if (path === '/api/settings') data = { UNITS: 'metric' }
       else if (path === '/api/latest') data = { reading: null, stale: true, server_time: epoch / 1000 }
-      else if (path === '/api/status') data = { version: 'test', timezone: 'UTC', jobs: [], readings: { n: 0, first: null, last: null }, database_bytes: 0, backup_scope: 'test' }
+      else if (path === '/api/status') data = { version: 'test', timezone: appTimezone, jobs: [], readings: { n: 0, first: null, last: null }, database_bytes: 0, backup_scope: 'test' }
       else if (path === '/api/history') data = { points: [], forecasts: [], step: 60, stats: { samples: 0 } }
       else if (path === '/api/forecast') data = { points: [], daily: [] }
       else if (path === '/api/astronomy') data = { available: false }
@@ -281,11 +282,45 @@ try {
   await evaluate(`window.__testNow = ${hour(17) * 1000}`)
   await selected('Evening')
   assert.ok(await evaluate(`document.activeElement === ${panel}.querySelector('select')`), 'Completion must not steal focus outside tabs')
+  status = fresh()
+  await refresh()
   await evaluate(`${tab('Evening')}.focus()`)
   await evaluate(`window.__testNow = ${hour(23) * 1000}`)
-  await wait(`${panel}.querySelectorAll('[role=tab]').length === 0`)
-  assert.ok(await evaluate(`document.activeElement === ${panel}.querySelector('h2')`), 'Last completed tab returns focus to section heading')
-  assert.ok(await evaluate(`${button('Generate')}.disabled`), 'No generation after all periods end')
+  await wait(`${panel}.querySelector('h2').textContent === 'What to wear tomorrow'`)
+  assert.equal(await evaluate(`${panel}.querySelectorAll('[role=tab]').length`), 3)
+  await selected('Morning')
+  assert.ok(await evaluate(`document.activeElement === ${tab('Morning')}`), 'Overnight rollover moves focused evening tab to tomorrow morning')
+  assert.match(await evaluate(`${panel}.querySelector('.clothing-day').textContent`), /Sep 21/)
+  assert.equal(await evaluate(`${panel}.querySelectorAll('details.clothing-ranking').length`), 0, 'Never relabel today’s results as tomorrow')
+  assert.equal(await evaluate(`${button('Generate')}.disabled`), false, 'Overnight generation remains available')
+
+  status.results = results.map(r => ({
+    ...structuredClone(r), start: r.start + 86400, end: r.end + 86400,
+    generated: hour(23), forecast_fetched: hour(23),
+  }))
+  await refresh()
+  assert.match(await evaluate(`${panel}.querySelector('[role=tabpanel]').innerText`), /Warm trousers/)
+  await evaluate(`window.__testNow = ${(hour(23) + 3600) * 1000}`)
+  await wait(`${panel}.querySelector('h2').textContent === 'What to wear today'`)
+  assert.match(await evaluate(`${panel}.querySelector('.clothing-day').textContent`), /Sep 21/)
+  assert.match(await evaluate(`${panel}.querySelector('[role=tabpanel]').innerText`), /Warm trousers/, 'Midnight keeps the upcoming day, not the day after it')
+
+  // Reproduce the reported October 5, 23:44 Los Angeles case with another browser timezone.
+  appTimezone = 'America/Los_Angeles'
+  await command('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Tokyo' })
+  await command('Page.reload', { ignoreCache: true })
+  await wait(`${panel}?.getAttribute('aria-busy') === 'false' && ${panel}.innerText.includes('America/Los_Angeles')`)
+  await evaluate(`window.__testNow = ${Date.parse('2026-10-06T06:44:00Z')}`)
+  await wait(`${panel}.querySelector('h2').textContent === 'What to wear tomorrow'`)
+  assert.match(await evaluate(`${panel}.querySelector('.clothing-day').textContent`), /Oct 6/)
+  assert.equal(await evaluate(`${panel}.querySelectorAll('[role=tab]').length`), 3)
+  await evaluate(`window.__testNow = ${Date.parse('2026-10-06T07:01:00Z')}`)
+  await wait(`${panel}.querySelector('h2').textContent === 'What to wear today'`)
+  assert.match(await evaluate(`${panel}.querySelector('.clothing-day').textContent`), /Oct 6/)
+  status.weather_error = 'Fresh, complete Open-Meteo forecasts are required for morning.'
+  await refresh()
+  assert.ok(await evaluate(`${button('Generate')}.disabled`), 'Missing upcoming-day weather still blocks spending')
+  assert.match(await evaluate(`${panel}.innerText`), /Fresh, complete Open-Meteo/)
   assert.equal(requests.filter(r => r.method === 'POST').length, 1, 'Only explicit Generate posts')
   assert.deepEqual(exceptions, [], 'No runtime JavaScript exceptions')
   assert.deepEqual(unexpected, [], 'No unmocked API endpoints')

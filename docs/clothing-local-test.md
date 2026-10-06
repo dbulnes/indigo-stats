@@ -42,8 +42,12 @@ either trial script.
 The fixture supplies complete hourly forecasts and a current synthetic
 PurpleAir observation using the application's normal storage/provenance
 functions. Coordinates `0,0` are placeholders, not a real installation.
-The timezone is `Etc/UTC`; only remaining periods for the current UTC date are
-eligible. After 23:00 UTC, today's periods have ended: retry after midnight UTC.
+The timezone is `Etc/UTC`; the fixture supplies 48 hours of forecasts.
+At 23:00 UTC, eligible periods roll to tomorrow's 06:00–11:00, 11:00–17:00,
+and 17:00–23:00. From midnight through 05:59 UTC, they remain the upcoming
+daytime periods of the current date, not the following date. During daytime,
+completed periods are skipped. Fresh matching cached results can be reused
+across midnight without additional provider calls.
 
 ## Refresh evidence
 
@@ -55,8 +59,8 @@ docker exec -i -u 99:100 YOUR_PRINTED_TRIAL_NAME python - < deploy/clothing-test
 
 Run that command from the repository root immediately before Generate.
 Observation collection age must be at most 180 seconds and source age at most
-600 seconds; forecasts expire after three hours. Refresh after a date change
-as well. A refresh changes forecast provenance, so it can invalidate previously
+600 seconds; forecasts expire after three hours. Refresh when evidence expires
+or no longer covers the selected day. Changed weather summaries can invalidate
 cached recommendations; a subsequent deliberate Generate may cost again.
 Jobs remain disabled, so evidence does not refresh automatically.
 
