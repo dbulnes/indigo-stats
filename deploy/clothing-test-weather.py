@@ -62,8 +62,6 @@ def seed():
                      3, 20, None, 2, 8, temp - 2, 35, None, None, None))
     jobs.store_forecasts(rows, CONFIG)
     print("Synthetic weather refreshed (UTC); no network or AI request made.")
-    if datetime.fromtimestamp(now, timezone.utc).hour >= 23:
-        print("UTC is past 23:00: today's clothing periods have ended. Try after 00:00 UTC.")
 
 
 if __name__ == "__main__":

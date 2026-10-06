@@ -31,6 +31,14 @@ const periods = [
 ]
 const providerName = (provider: string) => provider === 'typesafe' ? 'TypeSafe (direct)' : 'jevmodel.org'
 
+function localCalendar(timestamp: number, timezone: string) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en', {
+    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+  }).formatToParts(timestamp).map(part => [part.type, part.value]))
+  // UTC here represents a calendar date, not an instant in the configured zone.
+  return { date: new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))), hour: Number(parts.hour) }
+}
+
 function PreferenceRanking({ label, ranking }: { label: string; ranking: Ranking }) {
   if (!ranking.length) return <p className="clothing-unavailable">{label}: unavailable</p>
   const top = ranking[0]
@@ -60,7 +68,7 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
   const [clock, setClock] = useState(Date.now())
   const [retryAt, setRetryAt] = useState(0)
   const [synchronized, setSynchronized] = useState(false)
-  const [selectedPeriod, setSelectedPeriod] = useState('morning')
+  const [selection, setSelection] = useState({ day: '', period: 'morning' })
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const tabFocusBeforeClock = useRef<HTMLButtonElement | null>(null)
   const headingRef = useRef<HTMLHeadingElement | null>(null)
@@ -160,10 +168,17 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
   const shortTime = (ts: number) => new Date(ts * 1000).toLocaleTimeString([], {
     timeZone: timezone, hour: '2-digit', minute: '2-digit',
   })
-  const results = status?.results.filter(r => r.end * 1000 > clock) ?? []
-  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: 'numeric', hourCycle: 'h23' }).format(clock))
-  const remaining = periods.filter(period => hour < period.end)
-  const selected = remaining.find(period => period.id === selectedPeriod) ?? remaining[0]
+  const local = localCalendar(clock, timezone)
+  const tomorrow = local.hour >= 23
+  const targetDate = new Date(local.date)
+  // Advance the calendar day, not the local instant: DST days can be 23 or 25 hours.
+  if (tomorrow) targetDate.setUTCDate(targetDate.getUTCDate() + 1)
+  const targetDay = targetDate.toISOString().slice(0, 10)
+  const dateLabel = targetDate.toLocaleDateString([], { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' })
+  const results = status?.results.filter(r => r.end * 1000 > clock
+    && localCalendar(r.start * 1000, timezone).date.getTime() === targetDate.getTime()) ?? []
+  const remaining = periods.filter(period => tomorrow || local.hour < period.end)
+  const selected = (selection.day === targetDay ? remaining.find(period => period.id === selection.period) : undefined) ?? remaining[0]
   const result = results.find(item => item.period === selected?.id)
   const forecast = result?.state.forecast
   const observation = result?.state.current_observation
@@ -176,27 +191,27 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
 
   return <section className="panel clothing-panel" aria-labelledby="clothing-heading" aria-busy={pending !== null}>
     <div className="clothing-heading">
-      <h2 id="clothing-heading" ref={headingRef} tabIndex={-1}>What to wear today</h2>
+      <h2 id="clothing-heading" ref={headingRef} tabIndex={-1}>What to wear {tomorrow ? 'tomorrow' : 'today'}</h2>
       <span className={`clothing-badge${stale ? ' is-stale' : ''}`}>
         {pending === 'read' ? 'Loading…' : result ? stale ? 'Stale' : 'Saved' : 'Not generated'}
       </span>
     </div>
-    <p className="clothing-intro">One period at a time. Open a clothing group to compare alternatives.</p>
-    {remaining.length > 0 && <div className="clothing-tabs" role="tablist" aria-label="Clothing recommendation period">
+    <p className="clothing-intro"><span className="clothing-day">{dateLabel} · {timezone}</span>Open a clothing group to compare alternatives.</p>
+    <div className="clothing-tabs" role="tablist" aria-label="Clothing recommendation period">
       {remaining.map((period, index) => {
         const cached = results.find(item => item.period === period.id)
-        return <button key={period.id} type="button" role="tab"
+        return <button key={`${targetDay}-${period.id}`} type="button" role="tab"
           id={`clothing-tab-${period.id}`} aria-controls="clothing-period-panel"
           aria-selected={selected.id === period.id} tabIndex={selected.id === period.id ? 0 : -1}
           ref={node => { tabRefs.current[index] = node }}
-          onClick={() => setSelectedPeriod(period.id)}
+          onClick={() => setSelection({ day: targetDay, period: period.id })}
           onKeyDown={event => {
             const next = event.key === 'ArrowRight' ? (index + 1) % remaining.length
               : event.key === 'ArrowLeft' ? (index + remaining.length - 1) % remaining.length
               : event.key === 'Home' ? 0 : event.key === 'End' ? remaining.length - 1 : null
             if (next !== null) {
               event.preventDefault()
-              setSelectedPeriod(remaining[next].id)
+              setSelection({ day: targetDay, period: remaining[next].id })
               tabRefs.current[next]?.focus()
             }
           }}>
@@ -204,12 +219,12 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
           <small>{period.hours}{cached ? ` · ${tempRange(cached.state.forecast.temperature_f)}` : ''}</small>
         </button>
       })}
-    </div>}
+    </div>
     {error && <p role="alert" className="notice">{error}</p>}
     {status?.error && !error.includes(status.error) && <p role="alert" className="notice">Last generation: {status.error}</p>}
     {status && !synchronized && <p className="notice">Refresh saved results successfully before generating again.</p>}
     {status?.weather_error && <p className="notice">Weather unavailable: {status.weather_error} Saved results below may no longer reflect current conditions.</p>}
-    {selected ? <div key={selected.id} id="clothing-period-panel" role="tabpanel"
+    <div key={`${targetDay}-${selected.id}`} id="clothing-period-panel" role="tabpanel"
       aria-labelledby={`clothing-tab-${selected.id}`} tabIndex={0}>
       {result && forecast ? <>
         <div className="clothing-weather">
@@ -255,14 +270,14 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
         <h3>{pending === 'read' ? 'Loading saved recommendations…' : `No saved ${selected.label.toLowerCase()} recommendations`}</h3>
         <p>Generate prepares all remaining periods using available weather. Switching tabs never spends credits.</p>
       </div>}
-    </div> : <div className="clothing-empty"><h3>Today’s periods are complete</h3><p>Recommendations cover 06–23 in {timezone}. Come back tomorrow.</p></div>}
+    </div>
 
     <div className="clothing-controls">
       {status && !status.configured && <p className="clothing-context-note">API key needed. Open Setup / settings below.</p>}
       {activity && <p className="clothing-activity" role="status">{activity}</p>}
       {retrySeconds > 0 && <p className="clothing-context-note">Generation cooldown: {retrySeconds}s remaining.</p>}
       <div className="clothing-actions">
-        <button className="clothing-generate" disabled={locked || !synchronized || !status?.configured || retrySeconds > 0 || !!status?.weather_error || !remaining.length}
+        <button className="clothing-generate" disabled={locked || !synchronized || !status?.configured || retrySeconds > 0 || !!status?.weather_error}
           onClick={() => void request('generate')}>{pending === 'generate' ? 'Generating…' : 'Generate'}</button>
         <button className="clothing-refresh" disabled={pending !== null} onClick={() => void request('read')}>
           <RefreshCw size={14} aria-hidden="true" />{pending === 'read' ? 'Loading…' : 'Refresh saved results'}
@@ -280,8 +295,11 @@ export function ClothingPanel({ timezone, units }: { timezone: string; units: st
             <option value="typesafe">TypeSafe (direct)</option>
           </select>
         </label>
+        {status && <p>{status.configured
+          ? 'Key supplied on the server. Provider acceptance is checked only when you Generate.'
+          : 'Key not configured for this provider. Generation is disabled until a key is supplied.'}</p>}
         <p>Set the {providerName(status?.provider ?? 'jevmodel')} API key in the masked Unraid container template field, then Apply. For other installations, set <code>{status?.provider === 'typesafe' ? 'CLOTHING_TYPESAFE_API_KEY' : 'CLOTHING_JEVMODEL_API_KEY'}</code> in the container environment. Keys are never entered in this dashboard.</p>
-        <p>Local periods: morning 06–11, afternoon 11–17, evening 17–23 ({timezone}). Completed periods are skipped. Generate makes up to three requests, eight questions each; fresh matching cached periods are reused for up to one hour.</p>
+        <p>Local periods: morning 06–11, afternoon 11–17, evening 17–23 ({timezone}). Completed periods are skipped. From 23:00 we show tomorrow; midnight through 06:00 keeps that upcoming day's forecast. Generate makes up to three requests, eight questions each; fresh matching cached periods are reused for up to one hour.</p>
         <p>No coordinates, addresses, sensor identifiers, IPs, or raw payloads are sent to the clothing provider. Reported token counts are not a price or spending limit. Opening the dashboard and changing provider never generate.</p>
       </details>
     </div>

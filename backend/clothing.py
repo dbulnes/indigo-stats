@@ -7,7 +7,7 @@ import os
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, time as wall_time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -117,8 +117,8 @@ def weather_states(now, settings):
         raise ClothingError('Enable forecasts before generating clothing recommendations.')
     zone = ZoneInfo(settings.get('timezone', 'Etc/UTC'))
     local = datetime.fromtimestamp(now, zone)
-    if local.hour >= 23:
-        return []
+    # Roll the calendar date, not elapsed seconds: DST days need not be 24 hours.
+    target_date = local.date() + timedelta(days=1 if local.hour >= 23 else 0)
     states = []
     observation = None
     warning = 'Fresh outdoor PurpleAir temperature and humidity unavailable; using forecasts only.'
@@ -144,8 +144,8 @@ def weather_states(now, settings):
                                'temperature_f': round(temp, 1), 'humidity_percent': round(humidity, 1)}
                 warning = None
         for name, start_hour, end_hour in PERIODS:
-            start = int(local.replace(hour=start_hour, minute=0, second=0, microsecond=0).timestamp())
-            end = int(local.replace(hour=end_hour, minute=0, second=0, microsecond=0).timestamp())
+            start = int(datetime.combine(target_date, wall_time(start_hour), zone).timestamp())
+            end = int(datetime.combine(target_date, wall_time(end_hour), zone).timestamp())
             if end <= now:
                 continue
             first = start + max(0, (now - start) // 3600) * 3600
@@ -160,7 +160,7 @@ def weather_states(now, settings):
                            for i, r in enumerate(rows))):
                 raise ClothingError(f'Fresh, complete Open-Meteo forecasts are required for {name}.')
             summary = {'source': 'Open-Meteo forecast', 'period': name,
-                       'local_hours': f'{max(start_hour, local.hour):02d}:00–{end_hour:02d}:00',
+                       'local_hours': f'{datetime.fromtimestamp(first, zone).hour:02d}:00–{end_hour:02d}:00',
                        'temperature_f': [min(r['temperature'] for r in rows), max(r['temperature'] for r in rows)],
                        'apparent_temperature_f': [min(r['apparent_temperature'] for r in rows),
                                                   max(r['apparent_temperature'] for r in rows)],

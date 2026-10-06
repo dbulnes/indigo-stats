@@ -48,7 +48,7 @@ class ClothingTests(unittest.TestCase):
         local = datetime.fromtimestamp(self.now, ZoneInfo(zone))
         start = int(local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
         rows = [(self.now-60, start+hour*3600, 'weather', 50, 60, None, None, 40, None,
-                 None, 10, 45) for hour in range(24)]
+                 None, 10, 45) for hour in range(48)]
         jobs.store_forecasts(rows, db.settings())
         with db.connect() as con:
             con.execute('DELETE FROM readings')
@@ -89,11 +89,80 @@ class ClothingTests(unittest.TestCase):
         self.seed()
         self.assertEqual([s['period'] for s in clothing.weather_states(self.now, db.settings())], ['evening'])
         self.now += 6*3600
-        self.assertEqual(clothing.weather_states(self.now, db.settings()), [])
+        self.seed()
+        self.assertEqual(len(clothing.weather_states(self.now, db.settings())), 3)
         db.set_settings({'timezone': 'Asia/Kolkata'})
         self.now = int(datetime(2026, 1, 12, 8, 30, tzinfo=ZoneInfo('Asia/Kolkata')).timestamp())
         self.seed('Asia/Kolkata')
         self.assertEqual(len(clothing.weather_states(self.now, db.settings())), 3)
+
+    def test_overnight_calendar_windows_and_selected_forecasts(self):
+        zone = ZoneInfo('America/Los_Angeles')
+        db.set_settings({'timezone': zone.key})
+        cases = [
+            ('2026-10-05T22:59:59', '2026-10-05', ['evening']),
+            ('2026-10-05T23:00:00', '2026-10-06', ['morning', 'afternoon', 'evening']),
+            ('2026-10-05T23:44:00', '2026-10-06', ['morning', 'afternoon', 'evening']),
+            ('2026-10-06T00:00:00', '2026-10-06', ['morning', 'afternoon', 'evening']),
+            ('2026-10-06T05:59:59', '2026-10-06', ['morning', 'afternoon', 'evening']),
+            ('2026-10-06T06:00:00', '2026-10-06', ['morning', 'afternoon', 'evening']),
+            ('2026-01-31T23:44:00', '2026-02-01', ['morning', 'afternoon', 'evening']),
+            ('2026-12-31T23:44:00', '2027-01-01', ['morning', 'afternoon', 'evening']),
+            ('2026-03-07T23:44:00', '2026-03-08', ['morning', 'afternoon', 'evening']),
+            ('2026-10-31T23:44:00', '2026-11-01', ['morning', 'afternoon', 'evening']),
+            ('2026-11-01T01:30:00', '2026-11-01', ['morning', 'afternoon', 'evening']),
+        ]
+        for instant, target, names in cases:
+            with self.subTest(instant=instant):
+                self.now = int(datetime.fromisoformat(instant).replace(tzinfo=zone).timestamp())
+                self.seed(zone.key)
+                midnight = int(datetime.fromisoformat(target).replace(tzinfo=zone).timestamp())
+                with db.connect() as con:
+                    con.execute('UPDATE forecasts SET temperature=75 WHERE valid>=?', (midnight,))
+                states = clothing.weather_states(self.now, db.settings())
+                self.assertEqual([s['period'] for s in states], names)
+                for state in states:
+                    name, start, end = next(p for p in clothing.PERIODS if p[0] == state['period'])
+                    self.assertEqual(datetime.fromtimestamp(state['start'], zone).isoformat(),
+                                     datetime.fromisoformat(f'{target}T{start:02}:00:00').replace(tzinfo=zone).isoformat())
+                    self.assertEqual(datetime.fromtimestamp(state['end'], zone).hour, end)
+                    self.assertEqual(datetime.fromtimestamp(state['end'], zone).date().isoformat(), target)
+                    self.assertEqual(state['state']['forecast']['temperature_f'], [75, 75])
+                    self.assertEqual(len(clothing.QUESTIONS), 8)
+                    if len(names) == 3:
+                        self.assertEqual(state['state']['forecast']['local_hours'], f'{start:02}:00–{end:02}:00')
+
+    def test_overnight_missing_next_day_fails_without_paid_call(self):
+        self.now = int(datetime(2026, 10, 5, 23, 44, tzinfo=ZoneInfo('Etc/UTC')).timestamp())
+        self.seed()
+        with db.connect() as con:
+            con.execute('DELETE FROM forecasts WHERE valid>=?', (self.now + 16*60,))
+        with patch.object(clothing, 'ask') as ask:
+            with self.assertRaisesRegex(clothing.ClothingError, 'complete'):
+                self.generate()
+            ask.assert_not_called()
+
+    def test_overnight_cache_survives_midnight_but_is_date_isolated(self):
+        zone = ZoneInfo('America/Los_Angeles')
+        db.set_settings({'timezone': zone.key, 'placement': 'indoors'})
+        self.now = int(datetime(2026, 10, 5, 23, 44, tzinfo=zone).timestamp())
+        self.seed(zone.key)
+        with patch.object(clothing, 'ask', return_value=response()) as ask:
+            overnight = self.generate()
+            self.assertEqual(ask.call_count, 3)
+            self.now += 20*60
+            midnight = self.generate()
+            self.assertEqual(ask.call_count, 3)
+            self.assertEqual(midnight['results'], overnight['results'])
+            self.assertFalse(any(r['stale'] for r in midnight['results']))
+            next_states = clothing.weather_states(self.now, db.settings())
+            cached = db.settings()['clothing_state']['results'][0]
+            wrong_date = dict(cached, start=cached['start']-86400)
+            self.assertFalse(clothing.valid_cache(wrong_date, next_states[0], self.now, 'jevmodel'))
+            self.now += 24*3600
+            self.seed(zone.key)
+            self.generate()
+            self.assertEqual(ask.call_count, 6)
 
     def test_missing_stale_disabled_forecasts_fail_before_spending(self):
         with patch.object(clothing, 'ask') as ask:

@@ -12,6 +12,7 @@
 .clothing-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .clothing-badge.is-stale { color: #edc997; }
 .clothing-panel .clothing-intro { margin-top: 8px; color: var(--clothing-muted); font-size: 12px; line-height: 1.6; }
+.clothing-day { display: block; margin-bottom: 3px; color: #d2dbea; }
 .clothing-tabs { display: flex; gap: 4px; padding: 5px; margin: 20px 0; background: #101a27; border-radius: 9px; }
 .clothing-tabs button {
   flex: 1; min-width: 0; border: 0; border-radius: 6px; background: none; text-align: left;

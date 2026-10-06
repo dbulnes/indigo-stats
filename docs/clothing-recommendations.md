@@ -12,6 +12,15 @@ The app reports actual token usage returned by the provider. No measured live us
 
 Recommendations use recent PurpleAir readings and existing weather forecasts. They do not predict weather or fetch a new forecast through Jev. Local periods are **06:00–11:00**, **11:00–17:00**, and **17:00–23:00** in the configured timezone; ended periods are skipped.
 
+From **23:00 through 05:59**, Generate prepares the upcoming daytime periods:
+at 23:00 the target rolls to tomorrow, and after midnight it remains that same
+calendar day. For example, October 5 at 23:44 in America/Los_Angeles targets
+October 6; October 6 at 00:00–05:59 also targets October 6, not October 7.
+The selected day's complete, fresh forecasts are required before any paid call.
+Calendar boundaries follow the configured timezone, including daylight-saving
+changes. Fresh matching overnight cache entries can be reused after midnight;
+the date change alone does not authorize or require a paid refresh.
+
 After upgrading from an image that did not record forecast provenance, wait for the next successful forecast refresh before generating clothing recommendations. An existing forecast batch alone is not trusted for this feature until the collector has recorded its provenance. Check forecast collection health if recommendations remain unavailable; refreshing the dashboard is not a forecast refresh and does not authorize a paid recommendation request.
 
 The provenance must match the configured location and timezone; missing or mismatched provenance blocks provider spending. Configuration or weather changes can leave cached recommendations visible but marked stale until their period ends. They never trigger an automatic paid refresh. Once weather is ready, use **Generate** manually, respecting the five-minute retry cooldown.
