@@ -414,3 +414,92 @@ class ClothingTests(unittest.TestCase):
         states = clothing.weather_states(self.now, db.settings())
         self.assertIsNone(states[0]['state']['current_observation'])
         self.assertIn('forecasts only', states[0]['warning'])
+
+    def test_settings_change_without_forecast_loss_stops_more_requests(self):
+        def change(*args):
+            db.set_settings({'sensor_host': 'other.invalid'})
+            return response()
+        with patch.object(clothing, 'ask', side_effect=change) as ask:
+            with self.assertRaisesRegex(clothing.ClothingError, 'Weather or settings changed') as caught:
+                self.generate()
+            self.assertEqual(caught.exception.status, 409)
+            self.assertEqual(ask.call_count, 1)
+        status = clothing.public_status(self.now)
+        self.assertEqual(status['usage']['input_tokens'], 100)
+        self.assertEqual(status['unknown_usage_requests'], 0)
+
+    def test_cumulative_usage_overflow_is_unknown_and_not_accumulated(self):
+        limit = clothing.MAX_REPORTED_TOKENS
+        first, second = response(), response()
+        first['usage'] = {'input_tokens': limit, 'output_tokens': 20}
+        second['usage'] = {'input_tokens': 1, 'output_tokens': 20}
+        with patch.object(clothing, 'ask', side_effect=[first, second]) as ask:
+            with self.assertRaisesRegex(clothing.ClothingError, 'accounting range') as caught:
+                self.generate()
+            self.assertEqual(caught.exception.status, 502)
+            self.assertEqual(ask.call_count, 2)
+        status = clothing.public_status(self.now)
+        self.assertEqual(status['usage'], {'input_tokens': limit, 'output_tokens': 20})
+        self.assertEqual(status['unknown_usage_requests'], 1)
+        self.assertEqual(len(status['results']), 1)
+
+    def test_usage_of_ignores_missing_or_malformed_usage(self):
+        for value in (None, [], 'usage', {}, {'usage': None}, {'usage': []}, {'usage': 'x'}):
+            self.assertIsNone(clothing.usage_of(value))
+        self.assertIsNone(clothing.usage_of({'usage': {'input_tokens': -1, 'output_tokens': True}}))
+        self.assertEqual(clothing.usage_of({'usage': {'input_tokens': 5, 'extra': 9}}), {'input_tokens': 5})
+
+    def test_read_key_rejects_unknown_provider(self):
+        for provider in ('other', '', None):
+            with self.assertRaisesRegex(clothing.ClothingError, 'Choose jevmodel or typesafe'):
+                clothing.read_key(provider)
+
+    def test_configure_conflicts_with_running_generation(self):
+        with clothing.LOCK:
+            with self.assertRaisesRegex(clothing.ClothingError, 'already running') as caught:
+                clothing.configure({'provider': 'typesafe'})
+            self.assertEqual(caught.exception.status, 409)
+        self.assertNotIn('clothing_provider', db.settings())
+
+    def test_config_route_updates_provider_and_maps_errors(self):
+        headers = {'X-Indigo-Request': '1'}
+        saved = self.client.put('/api/clothing', json={'provider': 'typesafe'}, headers=headers)
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json()['provider'], 'typesafe')
+        self.assertEqual(db.settings()['clothing_provider'], 'typesafe')
+        invalid = self.client.put('/api/clothing', json={'provider': 'other'}, headers=headers)
+        self.assertEqual(invalid.status_code, 400)
+        extra = self.client.put('/api/clothing', json={'provider': 'jevmodel', 'api_key': 'never-persist-this'},
+                                headers=headers)
+        self.assertEqual(extra.status_code, 400)
+        self.assertNotIn('never-persist-this', json.dumps(db.settings()))
+        self.assertEqual(db.settings()['clothing_provider'], 'typesafe')
+        with clothing.LOCK:
+            busy = self.client.put('/api/clothing', json={'provider': 'jevmodel'}, headers=headers)
+        self.assertEqual(busy.status_code, 409)
+        self.assertEqual(db.settings()['clothing_provider'], 'typesafe')
+
+    def test_adapter_rejects_oversized_and_unusable_provider_bodies(self):
+        real_client = httpx.AsyncClient
+        def ask_with(handler):
+            with patch.object(clothing.httpx, 'AsyncClient', side_effect=lambda **kw: real_client(
+                    transport=httpx.MockTransport(handler), **kw)):
+                return clothing.ask('jevmodel', 'synthetic-test-key', {}, 'id')
+        with self.assertRaisesRegex(clothing.ClothingError, 'size limit') as caught:
+            ask_with(lambda r: httpx.Response(200, content=b'x'*65537))
+        self.assertEqual(caught.exception.status, 502)
+        def unreachable(request):
+            raise httpx.ConnectError('PRIVATE NETWORK DETAIL', request=request)
+        for handler in (lambda r: httpx.Response(200, content=b'not json PRIVATE'), unreachable):
+            with self.assertRaisesRegex(clothing.ClothingError, 'billing may be unknown') as caught:
+                ask_with(handler)
+            self.assertEqual(caught.exception.status, 502)
+            self.assertNotIn('PRIVATE', str(caught.exception))
+            self.assertIsNone(caught.exception.__cause__)
+        def expire(awaitable, timeout):
+            self.assertEqual(timeout, 30)
+            awaitable.close()
+            raise TimeoutError
+        with patch.object(clothing.asyncio, 'wait_for', side_effect=expire):
+            with self.assertRaisesRegex(clothing.ClothingError, 'billing may be unknown'):
+                clothing.ask('jevmodel', 'synthetic-test-key', {}, 'id')
